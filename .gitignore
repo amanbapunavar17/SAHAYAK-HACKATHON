@@ -4,6 +4,11 @@
 .env.*
 .agents/
 
+# Node & Build
+node_modules/
+dist/
+scratch/
+
 # Python
 __pycache__/
 *.pyc
@@ -11,3 +16,4 @@ __pycache__/
 # IDE & OS
 .DS_Store
 Thumbs.db
+
