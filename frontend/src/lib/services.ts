@@ -256,10 +256,44 @@ export const auditService = {
 // AI Campus Assistant Service
 export const assistantService = {
   generateReportDescription: async (title: string, category: string, location: string): Promise<string> => {
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/ai/describe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          category,
+          incidentPlace: location
+        })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.enhanced_description) {
+          return json.data.enhanced_description;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
     return `Misplaced item: ${title} (${category.replace('_', ' ')}) near ${location}. In good condition with standard distinguishing markings. Please contact NIE Proctor office for verification.`;
   },
 
   askQuestion: async (query: string): Promise<string> => {
+    try {
+      const res = await fetch('http://localhost:8000/api/v1/assistant/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: query })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data?.reply) {
+          return json.data.reply;
+        }
+      }
+    } catch (e) {
+      // Fallback
+    }
     const lower = query.toLowerCase();
     if (lower.includes('where') || lower.includes('locker') || lower.includes('security') || lower.includes('desk')) {
       return 'Official NIE North Campus collection and handover points are located at:\n1. Main Security Desk (Ground Floor, Main Entrance Gate) - Open 24/7\n2. Sir MV Block Department Proctor Office (Room 102)\n3. Central Library Circulation Helpdesk\n4. North Canteen Security Desk.';
@@ -273,3 +307,4 @@ export const assistantService = {
     return 'Thank you for asking SAHAYAK. You can report lost or found items directly from the student dashboard, track live AI similarity scores in the Match Radar, or visit the NIE North Main Security Desk for assistance.';
   }
 };
+
