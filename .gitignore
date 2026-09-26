@@ -1,0 +1,13 @@
+# Environment variables & secrets
+.env
+*.env
+.env.*
+.agents/
+
+# Python
+__pycache__/
+*.pyc
+
+# IDE & OS
+.DS_Store
+Thumbs.db
