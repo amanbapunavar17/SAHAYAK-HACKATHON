@@ -24,4 +24,7 @@ scratch/
 .DS_Store
 Thumbs.db
 
+# Media uploads
+uploads/
+
 

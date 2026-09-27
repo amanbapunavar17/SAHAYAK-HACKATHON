@@ -17,34 +17,75 @@ router = APIRouter(prefix="/matches", tags=["Matches"])
 
 def format_match_dict(m: PotentialMatch) -> dict:
     reasons = json.loads(m.reasons_json) if m.reasons_json else []
-    match_clues = json.loads(m.match_clues_json) if m.match_clues_json else []
+    match_clues_raw = json.loads(m.match_clues_json) if m.match_clues_json else []
+
+    desc_a = None
+    desc_b = None
+    desc_sim = None
+    class_penalty = 0.0
+    class_compatible = True
+    clues_list = []
+
+    if isinstance(match_clues_raw, dict):
+        desc_a = match_clues_raw.get("description_a")
+        desc_b = match_clues_raw.get("description_b")
+        desc_sim = match_clues_raw.get("description_similarity")
+        class_penalty = match_clues_raw.get("class_penalty", 0.0)
+        class_compatible = match_clues_raw.get("class_compatible", True)
+        clues_list = match_clues_raw.get("clues", [])
+    elif isinstance(match_clues_raw, list):
+        clues_list = match_clues_raw
+
+    # Compute percentage scores (0-100) for frontend display
+    sim_pct = int(round(m.similarity_score * 100)) if m.similarity_score <= 1.0 else int(m.similarity_score)
+    vis_pct = int(round((m.visual_score or 0.0) * 100)) if (m.visual_score or 0.0) <= 1.0 else int(m.visual_score)
+    txt_pct = int(round((m.text_score or 0.0) * 100)) if (m.text_score or 0.0) <= 1.0 else int(m.text_score)
+    loc_pct = int(round((m.location_score or 0.0) * 100)) if (m.location_score or 0.0) <= 1.0 else int(m.location_score)
+    time_pct = int(round((m.time_score or 0.0) * 100)) if (m.time_score or 0.0) <= 1.0 else int(m.time_score)
+    attr_pct = int(round((m.attribute_score or 0.0) * 100)) if (m.attribute_score or 0.0) <= 1.0 else int(m.attribute_score)
+    desc_pct = int(round((desc_sim or 0.0) * 100)) if desc_sim is not None else None
 
     return {
         "id": m.id,
         "lostReportId": m.lost_report_id,
         "foundReportId": m.found_report_id,
-        "similarityScore": m.similarity_score,
+        "similarityScore": sim_pct,
         "similarity_score": m.similarity_score,
         "signals": {
             "categoryMatch": m.category_score >= 0.8,
-            "imageSimilarity": m.visual_score,
+            "imageSimilarity": vis_pct,
             "imageSimilarityScore": m.visual_score,
-            "textSimilarity": m.text_score,
+            "textSimilarity": txt_pct,
             "textSimilarityScore": m.text_score,
-            "locationScore": m.location_score,
+            "locationScore": loc_pct,
             "locationProximityScore": m.location_score,
-            "timeScore": m.time_score,
+            "timeScore": time_pct,
             "timeProximityScore": m.time_score,
-            "attributeMatchScore": m.attribute_score,
+            "attributeMatchScore": attr_pct,
+            "descriptionA": desc_a,
+            "descriptionB": desc_b,
+            "descriptionSimilarity": desc_pct,
+            "classPenalty": class_penalty,
+            "classCompatible": class_compatible,
             "reasons": reasons
         },
         "status": m.status,
         "lostReport": format_report_dict(m.lost_report) if m.lost_report else None,
         "foundReport": format_report_dict(m.found_report) if m.found_report else None,
-        "matchClues": match_clues,
+        "matchClues": clues_list,
         "suggestedAt": m.created_at.isoformat() if m.created_at else None,
         "createdAt": m.created_at.isoformat() if m.created_at else None
     }
+
+
+@router.post("/scan", summary="Trigger neural AI scan across all active database items")
+def trigger_radar_scan(
+    db: Session = Depends(get_db)
+):
+    svc = MatchingService(db)
+    matches = svc.rescan_all_matches()
+    data = [format_match_dict(m) for m in matches]
+    return api_response(data, meta={"message": f"Radar scan complete. Evaluated {len(matches)} high-confidence candidate matches."})
 
 
 @router.get("", summary="Get potential matches for user or campus radar")

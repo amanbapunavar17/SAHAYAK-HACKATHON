@@ -14,7 +14,13 @@ import {
   Phone,
   Mail,
   Building,
-  Key
+  Key,
+  Eye,
+  EyeOff,
+  Check,
+  X,
+  Lock,
+  AlertCircle
 } from 'lucide-react';
 
 export const RegisterPage: React.FC = () => {
@@ -35,6 +41,8 @@ export const RegisterPage: React.FC = () => {
     agreeTerms: true
   });
 
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -52,6 +60,19 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  // Password requirements real-time validation
+  const pwd = formData.password;
+  const hasMinLength = pwd.length >= 8;
+  const hasUppercase = /[A-Z]/.test(pwd);
+  const hasLowercase = /[a-z]/.test(pwd);
+  const hasNumber = /[0-9]/.test(pwd);
+  const hasSpecial = /[@$!%*?&#^()_+\-=\[\]{}|;:,.<>?/~`]/.test(pwd);
+  const passwordsMatch = pwd.length > 0 && pwd === formData.confirmPassword;
+  const isPasswordValid = hasMinLength && hasUppercase && hasLowercase && hasNumber && hasSpecial && passwordsMatch;
+
+  // Email validation
+  const isNieEmail = formData.email.toLowerCase().trim().endsWith('@nie.ac.in');
+
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -59,6 +80,10 @@ export const RegisterPage: React.FC = () => {
     if (step === 'identity' || !step) {
       if (!formData.fullName.trim() || !formData.email.trim()) {
         setError('Please fill in your full name and institutional email.');
+        return;
+      }
+      if (!isNieEmail) {
+        setError('Access Restricted: Only official institutional emails ending in "@nie.ac.in" are permitted.');
         return;
       }
       navigate('/register/academic');
@@ -69,14 +94,35 @@ export const RegisterPage: React.FC = () => {
       }
       navigate('/register/security');
     } else if (step === 'security') {
-      if (formData.password.length < 6) {
-        setError('Password must be at least 6 characters.');
+      if (!hasMinLength) {
+        setError('Password must be at least 8 characters long.');
         return;
       }
-      if (formData.password !== formData.confirmPassword) {
-        setError('Passwords do not match.');
+      if (!hasUppercase) {
+        setError('Password must contain at least one uppercase letter (A-Z).');
         return;
       }
+      if (!hasLowercase) {
+        setError('Password must contain at least one lowercase letter (a-z).');
+        return;
+      }
+      if (!hasNumber) {
+        setError('Password must contain at least one numerical digit (0-9).');
+        return;
+      }
+      if (!hasSpecial) {
+        setError('Password must contain at least one special symbol (e.g. @, #, $, %, !).');
+        return;
+      }
+      if (!passwordsMatch) {
+        setError('Passwords do not match. Please re-enter your password confirmation.');
+        return;
+      }
+      if (!formData.agreeTerms) {
+        setError('You must agree to the NIE Code of Conduct to proceed.');
+        return;
+      }
+
       setLoading(true);
       try {
         await registerStudent(formData);
@@ -104,7 +150,7 @@ export const RegisterPage: React.FC = () => {
             Join SAHAYAK
           </h1>
           <p className="text-xs sm:text-sm text-sahayak-text-secondary">
-            Step {stepNumber} of 4: {step === 'academic' ? 'Academic Details' : step === 'security' ? 'Security & Verification' : step === 'complete' ? 'Setup Complete' : 'Personal Identity'}
+            Step {stepNumber} of 4: {step === 'academic' ? 'Academic Details' : step === 'security' ? 'Security & Password Creation' : step === 'complete' ? 'Setup Complete' : 'Personal Identity'}
           </p>
         </div>
 
@@ -121,8 +167,9 @@ export const RegisterPage: React.FC = () => {
 
         <NeumorphicCard className="p-6 sm:p-8 border border-sahayak-brown/15 shadow-neumorph">
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-sahayak-error-soft text-sahayak-error text-xs font-semibold">
-              {error}
+            <div className="mb-4 p-3 rounded-xl bg-sahayak-error-soft text-sahayak-error text-xs font-semibold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{error}</span>
             </div>
           )}
 
@@ -146,9 +193,14 @@ export const RegisterPage: React.FC = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider">
-                  NIE Institutional Email
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider">
+                    NIE Institutional Email
+                  </label>
+                  <span className="text-[10px] font-bold text-sahayak-blue bg-sahayak-blue-ice px-2 py-0.5 rounded-md border border-sahayak-blue-sky/30">
+                    *@nie.ac.in Only
+                  </span>
+                </div>
                 <div className="relative">
                   <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sahayak-text-muted" />
                   <input
@@ -157,9 +209,19 @@ export const RegisterPage: React.FC = () => {
                     placeholder="e.g. rahul.sharma@nie.ac.in"
                     value={formData.email}
                     onChange={(e) => updateField('email', e.target.value)}
-                    className="w-full bg-sahayak-cream border border-sahayak-brown/20 rounded-xl pl-10 pr-4 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue"
+                    className={`w-full bg-sahayak-cream border rounded-xl pl-10 pr-4 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 ${
+                      formData.email && !isNieEmail
+                        ? 'border-sahayak-error focus:ring-sahayak-error'
+                        : 'border-sahayak-brown/20 focus:ring-sahayak-blue'
+                    }`}
                   />
                 </div>
+                {formData.email && !isNieEmail && (
+                  <p className="text-[11px] font-semibold text-sahayak-error flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" />
+                    <span>Email address must end with <strong>@nie.ac.in</strong></span>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -180,7 +242,8 @@ export const RegisterPage: React.FC = () => {
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 mt-4"
+                disabled={!isNieEmail && formData.email.length > 0}
+                className="w-full py-3 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
               >
                 <span>Continue to Academic Info</span>
                 <ArrowRight className="w-4 h-4" />
@@ -275,30 +338,99 @@ export const RegisterPage: React.FC = () => {
             <form onSubmit={handleNext} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider">
-                  Create Password
+                  Create Institutional Password
                 </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Min 6 characters"
-                  value={formData.password}
-                  onChange={(e) => updateField('password', e.target.value)}
-                  className="w-full bg-sahayak-cream border border-sahayak-brown/20 rounded-xl px-4 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue"
-                />
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sahayak-text-muted" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Min 8 characters with Uppercase, Number & Symbol"
+                    value={formData.password}
+                    onChange={(e) => updateField('password', e.target.value)}
+                    className="w-full bg-sahayak-cream border border-sahayak-brown/20 rounded-xl pl-10 pr-10 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-sahayak-text-muted hover:text-sahayak-text-primary p-1"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Password Requirements Live Checklist */}
+              <div className="p-3 bg-sahayak-cream-soft rounded-xl border border-sahayak-brown/15 space-y-2">
+                <div className="text-[11px] font-bold text-sahayak-text-secondary uppercase tracking-wider">
+                  Password Strength Requirements:
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
+                  <div className={`flex items-center gap-1.5 ${hasMinLength ? 'text-sahayak-success font-semibold' : 'text-sahayak-text-muted'}`}>
+                    {hasMinLength ? <Check className="w-3.5 h-3.5 text-sahayak-success" /> : <X className="w-3.5 h-3.5 text-sahayak-error" />}
+                    <span>At least 8 characters</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 ${hasUppercase ? 'text-sahayak-success font-semibold' : 'text-sahayak-text-muted'}`}>
+                    {hasUppercase ? <Check className="w-3.5 h-3.5 text-sahayak-success" /> : <X className="w-3.5 h-3.5 text-sahayak-error" />}
+                    <span>1+ Uppercase letter (A-Z)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 ${hasLowercase ? 'text-sahayak-success font-semibold' : 'text-sahayak-text-muted'}`}>
+                    {hasLowercase ? <Check className="w-3.5 h-3.5 text-sahayak-success" /> : <X className="w-3.5 h-3.5 text-sahayak-error" />}
+                    <span>1+ Lowercase letter (a-z)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 ${hasNumber ? 'text-sahayak-success font-semibold' : 'text-sahayak-text-muted'}`}>
+                    {hasNumber ? <Check className="w-3.5 h-3.5 text-sahayak-success" /> : <X className="w-3.5 h-3.5 text-sahayak-error" />}
+                    <span>1+ Number (0-9)</span>
+                  </div>
+
+                  <div className={`flex items-center gap-1.5 sm:col-span-2 ${hasSpecial ? 'text-sahayak-success font-semibold' : 'text-sahayak-text-muted'}`}>
+                    {hasSpecial ? <Check className="w-3.5 h-3.5 text-sahayak-success" /> : <X className="w-3.5 h-3.5 text-sahayak-error" />}
+                    <span>1+ Special symbol (@, $, !, %, *, #, etc.)</span>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider">
                   Confirm Password
                 </label>
-                <input
-                  type="password"
-                  required
-                  placeholder="Repeat your password"
-                  value={formData.confirmPassword}
-                  onChange={(e) => updateField('confirmPassword', e.target.value)}
-                  className="w-full bg-sahayak-cream border border-sahayak-brown/20 rounded-xl px-4 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue"
-                />
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-sahayak-text-muted" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Repeat your password"
+                    value={formData.confirmPassword}
+                    onChange={(e) => updateField('confirmPassword', e.target.value)}
+                    className={`w-full bg-sahayak-cream border rounded-xl pl-10 pr-10 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 ${
+                      formData.confirmPassword && !passwordsMatch
+                        ? 'border-sahayak-error focus:ring-sahayak-error'
+                        : 'border-sahayak-brown/20 focus:ring-sahayak-blue'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-sahayak-text-muted hover:text-sahayak-text-primary p-1"
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {formData.confirmPassword && !passwordsMatch && (
+                  <p className="text-[11px] font-semibold text-sahayak-error flex items-center gap-1 mt-1">
+                    <X className="w-3 h-3" />
+                    <span>Passwords do not match</span>
+                  </p>
+                )}
+                {formData.confirmPassword && passwordsMatch && (
+                  <p className="text-[11px] font-semibold text-sahayak-success flex items-center gap-1 mt-1">
+                    <Check className="w-3 h-3" />
+                    <span>Passwords match perfectly</span>
+                  </p>
+                )}
               </div>
 
               <div className="flex items-start gap-2 pt-2">
@@ -324,7 +456,7 @@ export const RegisterPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={loading}
+                  disabled={loading || !isPasswordValid}
                   className="flex-1 py-3 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading ? (

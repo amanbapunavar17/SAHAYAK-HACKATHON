@@ -112,24 +112,19 @@ export const StudentLoginPage: React.FC = () => {
         {/* Quick Test Accounts Bar */}
         <div className="p-3.5 rounded-2xl bg-sahayak-cream-soft border border-sahayak-brown/15 shadow-neumorph-sm space-y-2">
           <p className="text-[11px] font-bold text-sahayak-text-muted uppercase tracking-wider text-center">
-            Quick Fill Test Accounts (Real DB)
+            Institutional Login
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             <button
               type="button"
-              onClick={() => quickFill('student1@nie.ac.in', 'Student@123')}
-              className="px-2.5 py-2 rounded-xl bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-blue-deep text-xs font-bold hover:border-sahayak-blue hover:text-sahayak-blue text-left transition-all cursor-pointer shadow-neumorph-sm"
+              onClick={() => quickFill('student@nie.ac.in', 'Student@123')}
+              className="px-3 py-2 rounded-xl bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-blue-deep text-xs font-bold hover:border-sahayak-blue hover:text-sahayak-blue text-left transition-all cursor-pointer shadow-neumorph-sm flex items-center justify-between"
             >
-              <span className="block font-bold">Student 1</span>
-              <span className="text-[10px] text-sahayak-text-muted font-normal block truncate">student1@nie.ac.in</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => quickFill('student2@nie.ac.in', 'Student@123')}
-              className="px-2.5 py-2 rounded-xl bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-blue-deep text-xs font-bold hover:border-sahayak-blue hover:text-sahayak-blue text-left transition-all cursor-pointer shadow-neumorph-sm"
-            >
-              <span className="block font-bold">Student 2</span>
-              <span className="text-[10px] text-sahayak-text-muted font-normal block truncate">student2@nie.ac.in</span>
+              <div>
+                <span className="block font-bold">Default Student</span>
+                <span className="text-[10px] text-sahayak-text-muted font-normal block truncate">student@nie.ac.in</span>
+              </div>
+              <span className="text-[10px] bg-sahayak-blue-ice text-sahayak-blue px-2 py-0.5 rounded font-mono font-semibold">Auto Fill</span>
             </button>
           </div>
         </div>

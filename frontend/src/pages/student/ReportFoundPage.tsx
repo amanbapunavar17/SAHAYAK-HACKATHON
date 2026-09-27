@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
 import { reportsService, assistantService } from '../../lib/services';
 import { api } from '../../lib/api';
-import { ItemCategory, ImageSource } from '../../types';
+import { ItemCategory, ImageSource, ItemReport } from '../../types';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { SAHAYAKThread } from '../../components/ui/SAHAYAKThread';
 import { 
@@ -23,7 +23,9 @@ import {
   X,
   Search,
   Tag,
-  Loader2
+  Loader2,
+  KeyRound,
+  Copy
 } from 'lucide-react';
 
 const CATEGORIES: ItemCategory[] = [
@@ -83,6 +85,7 @@ export const ReportFoundPage: React.FC = () => {
   const [aiAssisting, setAiAssisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
+  const [createdReport, setCreatedReport] = useState<ItemReport | null>(null);
 
   useEffect(() => {
     async function loadMissing() {
@@ -187,6 +190,7 @@ export const ReportFoundPage: React.FC = () => {
       }, imageFile);
 
       setCreatedReportId(report.id);
+      setCreatedReport(report);
       setStep(3);
     } finally {
       setSubmitting(false);
@@ -551,8 +555,65 @@ export const ReportFoundPage: React.FC = () => {
               Found Report Submitted!
             </h2>
             <p className="text-xs sm:text-sm text-sahayak-text-secondary max-w-md mx-auto">
-              Report <span className="font-mono font-bold text-sahayak-blue">#{createdReportId || 'rep-found-10'}</span> has been registered. You have been awarded <span className="font-bold text-sahayak-gold">+30 Good Samaritan Points</span>!
+              Report registered successfully. You have been awarded <span className="font-bold text-sahayak-gold">+30 Good Samaritan Points</span>!
             </p>
+          </div>
+
+          {/* Anti-Fraud Case Tracking & Security PIN */}
+          <div className="p-4 rounded-xl bg-gradient-to-br from-sahayak-blue-deep to-sahayak-blue text-white max-w-md mx-auto text-left space-y-3 shadow-neumorph">
+            <div className="flex items-center justify-between border-b border-white/20 pb-2">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-sahayak-gold" />
+                <span className="font-heading font-bold text-xs uppercase tracking-wider text-sahayak-gold">
+                  Anti-Fraud Verification Pass
+                </span>
+              </div>
+              <span className="text-[10px] bg-white/25 px-2 py-0.5 rounded font-mono">TAMPER PROTECTED</span>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] text-white/70">Official Tracking Number:</span>
+              <div className="flex items-center justify-between bg-white/10 px-3 py-1.5 rounded-lg">
+                <span className="font-mono font-bold text-sm tracking-wider text-white">
+                  {createdReport?.trackingNumber || `NIE-FND-${Date.now().toString(36).toUpperCase()}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(createdReport?.trackingNumber || '')}
+                  className="text-white/70 hover:text-white p-1"
+                  title="Copy Tracking Number"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-white/70 flex items-center gap-1">
+                  <KeyRound className="w-3.5 h-3.5 text-sahayak-gold" /> Handover Security Claim PIN:
+                </span>
+                <span className="text-[9px] bg-sahayak-gold/20 text-sahayak-gold px-1.5 py-0.5 rounded font-semibold">
+                  Required for Handover
+                </span>
+              </div>
+              <div className="flex items-center justify-between bg-white/10 px-3 py-2 rounded-lg border border-sahayak-gold/30">
+                <span className="font-mono font-black text-lg tracking-widest text-sahayak-gold">
+                  {createdReport?.antiFraudCode || 'SEC-VERIFY'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => navigator.clipboard.writeText(createdReport?.antiFraudCode || '')}
+                  className="text-sahayak-gold/80 hover:text-sahayak-gold p-1"
+                  title="Copy Security PIN"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-[10px] text-white/70 leading-relaxed pt-1">
+                🔒 Security staff or proctor will verify this secret PIN before completing the item return to prevent imposter fraud.
+              </p>
+            </div>
           </div>
 
           <div className="p-4 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 max-w-md mx-auto text-left space-y-2 text-xs">

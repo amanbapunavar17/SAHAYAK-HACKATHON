@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../lib/authContext';
 import { reportsService } from '../../lib/services';
 import { ItemReport, ReportType } from '../../types';
 import { ReportCard } from '../../components/cards/ReportCard';
@@ -16,6 +17,9 @@ import {
 } from 'lucide-react';
 
 export const MyReportsPage: React.FC = () => {
+  const { studentUser, user } = useAuth();
+  const currentUser = studentUser || user;
+
   const [reports, setReports] = useState<ItemReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState<'ALL' | ReportType>('ALL');
@@ -24,24 +28,32 @@ export const MyReportsPage: React.FC = () => {
   useEffect(() => {
     async function loadReports() {
       try {
-        const data = await reportsService.getAll();
+        const data = await reportsService.getMyReports(currentUser?.id, currentUser?.usn);
         setReports(data);
       } finally {
         setLoading(false);
       }
     }
     loadReports();
-  }, []);
+  }, [currentUser?.id, currentUser?.usn]);
 
   if (loading) {
     return <LoadingState message="Loading your campus reports..." />;
   }
 
   const filteredReports = reports.filter(r => {
+    // Strict isolation: only reports created by current student
+    const isOwner = !currentUser?.id || 
+                    r.reporterId === currentUser.id || 
+                    (currentUser.usn && r.reporterUSN === currentUser.usn) || 
+                    (currentUser.email && r.reporterName === currentUser.email);
+    if (!isOwner) return false;
+
     const matchesType = typeFilter === 'ALL' || r.type === typeFilter;
-    const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.incidentPlace.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (r.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (r.incidentPlace || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (r.description || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          (r.trackingNumber || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesSearch;
   });
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
 import { api } from '../../lib/api';
 import { Message } from '../../types';
@@ -17,6 +18,10 @@ import {
 } from 'lucide-react';
 
 export const MessagesPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const targetCaseId = searchParams.get('caseId');
+  const targetMatchId = searchParams.get('matchId');
+
   const { studentUser, user } = useAuth();
   const currentUser = studentUser || user;
   const [cases, setCases] = useState<any[]>([]);
@@ -33,7 +38,15 @@ export const MessagesPage: React.FC = () => {
         const caseList = await api.verification.listCases();
         if (Array.isArray(caseList) && caseList.length > 0) {
           setCases(caseList);
-          setActiveCaseId(caseList[0].id || caseList[0].case_id || '');
+          if (targetCaseId) {
+            const found = caseList.find(c => c.id === targetCaseId || c.case_id === targetCaseId);
+            setActiveCaseId(found ? (found.id || found.case_id) : (caseList[0].id || caseList[0].case_id));
+          } else if (targetMatchId) {
+            const found = caseList.find(c => c.matchId === targetMatchId || c.match_id === targetMatchId);
+            setActiveCaseId(found ? (found.id || found.case_id) : (caseList[0].id || caseList[0].case_id));
+          } else {
+            setActiveCaseId(caseList[0].id || caseList[0].case_id || '');
+          }
         } else {
           // If no formal verification case yet, use fallback active case identifier
           setActiveCaseId('c-nie-general');
@@ -46,7 +59,7 @@ export const MessagesPage: React.FC = () => {
       }
     }
     loadCases();
-  }, []);
+  }, [targetCaseId, targetMatchId]);
 
   // Load messages for selected case
   useEffect(() => {

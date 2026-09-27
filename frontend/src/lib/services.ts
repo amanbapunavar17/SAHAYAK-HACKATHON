@@ -30,17 +30,44 @@ export const reportsService = {
     return getLocal<ItemReport[]>(REPORTS_KEY, []);
   },
 
-  getAll: async (): Promise<ItemReport[]> => {
+  getAll: async (params?: { reporter_id?: string; type?: string; category?: string; status?: string; search?: string }): Promise<ItemReport[]> => {
     try {
-      const liveReports = await api.reports.list();
+      const liveReports = await api.reports.list(params);
       if (liveReports && Array.isArray(liveReports)) {
-        setLocal(REPORTS_KEY, liveReports);
+        if (!params || Object.keys(params).length === 0) {
+          setLocal(REPORTS_KEY, liveReports);
+        }
         return liveReports;
       }
     } catch (err) {
       console.warn('Could not fetch live reports from backend:', err);
     }
-    return reportsService.getReports();
+    const local = reportsService.getReports();
+    if (!params) return local;
+    return local.filter(r => {
+      if (params.reporter_id && r.reporterId !== params.reporter_id && r.reporterUSN !== params.reporter_id && r.reporterName !== params.reporter_id) {
+        return false;
+      }
+      if (params.type && r.type !== params.type) return false;
+      if (params.status && r.status !== params.status) return false;
+      return true;
+    });
+  },
+
+  getMyReports: async (userId?: string, usn?: string): Promise<ItemReport[]> => {
+    if (!userId && !usn) {
+      return [];
+    }
+    try {
+      if (userId) {
+        const live = await api.reports.list({ reporter_id: userId });
+        if (Array.isArray(live)) return live;
+      }
+    } catch (err) {
+      console.warn('Live getMyReports error:', err);
+    }
+    const local = reportsService.getReports();
+    return local.filter(r => (userId && r.reporterId === userId) || (usn && r.reporterUSN === usn));
   },
 
   getReportById: (id: string): ItemReport => {
@@ -111,9 +138,16 @@ export const reportsService = {
       console.warn('Backend report creation notice:', apiErr);
     }
 
+    const tag = (reportData.type || 'LOST').toUpperCase().slice(0, 3);
+    const trackingNumber = `NIE-${tag}-${new Date().getFullYear()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`;
+    const antiFraudCode = `SEC-${Math.floor(100000 + Math.random() * 900000)}`;
+
     const newReport: ItemReport = {
       id: finalId,
       type: reportData.type || 'LOST',
+      trackingNumber: trackingNumber,
+      antiFraudCode: antiFraudCode,
+      securityClaimPin: antiFraudCode,
       title: reportData.title || 'Untitled Item',
       category: reportData.category || 'OTHER',
       description: reportData.description || '',
@@ -135,6 +169,7 @@ export const reportsService = {
       reporterUSN: reportData.reporterUSN || '',
       brand: reportData.brand,
       color: reportData.color,
+      serialNumber: reportData.serialNumber,
       distinguishingFeatures: reportData.distinguishingFeatures,
       isAnonymous: reportData.isAnonymous || false,
       createdAt: new Date().toISOString(),
@@ -192,9 +227,30 @@ export const matchingService = {
     return matchingService.getMatches();
   },
 
-  getMatchById: (id: string): MatchItem | undefined => {
+  rescanMatches: async (): Promise<MatchItem[]> => {
+    try {
+      const data = await api.matches.scan();
+      if (Array.isArray(data)) {
+        setLocal(MATCHES_KEY, data);
+        return data;
+      }
+    } catch (err) {
+      console.warn('Failed to trigger live match scan:', err);
+    }
+    return matchingService.getAll();
+  },
+
+  getMatchById: async (id: string): Promise<MatchItem | undefined> => {
+    try {
+      const data = await api.matches.get(id);
+      if (data && data.id) {
+        return data as MatchItem;
+      }
+    } catch (err) {
+      console.warn('Direct match fetch note:', err);
+    }
     const matches = matchingService.getMatches();
-    const found = matches.find(m => 
+    return matches.find(m => 
       m.id === id || 
       m.id.toLowerCase() === id.toLowerCase() ||
       m.id.includes(id) ||
@@ -202,7 +258,6 @@ export const matchingService = {
       m.lostReport?.id === id ||
       m.foundReport?.id === id
     );
-    return found;
   }
 };
 

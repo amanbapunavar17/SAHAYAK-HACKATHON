@@ -115,8 +115,16 @@ export const api = {
 
   // Reports
   reports: {
-    list: (params?: { type?: string; category?: string; status?: string; search?: string }) => {
-      const q = new URLSearchParams(params as any).toString();
+    list: (params?: { type?: string; category?: string; status?: string; search?: string; reporter_id?: string }) => {
+      const cleanParams: Record<string, string> = {};
+      if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+          if (v !== undefined && v !== null && v !== '') {
+            cleanParams[k] = String(v);
+          }
+        });
+      }
+      const q = new URLSearchParams(cleanParams).toString();
       return request<any[]>(`/reports${q ? `?${q}` : ''}`);
     },
     get: (id: string) => request<any>(`/reports/${id}`),
@@ -145,7 +153,11 @@ export const api = {
   matches: {
     list: (reportId?: string) =>
       request<any[]>(`/matches${reportId ? `?report_id=${reportId}` : ''}`),
-    get: (id: string) => request<any>(`/matches/${id}`)
+    get: (id: string) => request<any>(`/matches/${id}`),
+    scan: () =>
+      request<any[]>('/matches/scan', {
+        method: 'POST'
+      })
   },
 
   // Verification

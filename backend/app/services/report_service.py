@@ -67,8 +67,20 @@ class ReportService:
         combined_text = f"{req.title} {req.category} {req.description} {req.incident_place} {req.brand or ''} {req.color or ''}"
         text_emb = self.embedding_provider.generate_text_embedding(combined_text)
 
+        # Generate unique anti-fraud tracking number and secret security claim PIN
+        year = datetime.now(timezone.utc).year
+        tag = "LST" if req.report_type.upper() == "LOST" else "FND"
+        uid_suffix = uuid.uuid4().hex[:5].upper()
+        tracking_number = f"NIE-{tag}-{year}-{uid_suffix}"
+        
+        # 6-digit cryptographic random fraud-prevention claim PIN
+        import secrets
+        anti_fraud_code = f"SEC-{secrets.randbelow(900000) + 100000}"
+
         report = ItemReport(
             id=report_id,
+            tracking_number=tracking_number,
+            anti_fraud_code=anti_fraud_code,
             report_type=req.report_type.upper(),
             title=req.title.strip(),
             category=req.category,

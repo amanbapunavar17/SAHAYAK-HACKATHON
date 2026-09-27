@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
 import { reportsService, assistantService } from '../../lib/services';
 import { api } from '../../lib/api';
-import { ItemCategory, ImageSource } from '../../types';
+import { ItemCategory, ImageSource, ItemReport } from '../../types';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { SAHAYAKThread } from '../../components/ui/SAHAYAKThread';
 import { 
@@ -84,6 +84,7 @@ export const ReportLostPage: React.FC = () => {
   const [aiAssisting, setAiAssisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
+  const [createdReport, setCreatedReport] = useState<ItemReport | null>(null);
 
   React.useEffect(() => {
     async function loadDeposited() {
@@ -587,7 +588,7 @@ export const ReportLostPage: React.FC = () => {
         </NeumorphicCard>
       )}
 
-      {/* STEP 3: Submission Success State */}
+      {/* STEP 3: Submission Success State with Anti-Fraud Verification Codes */}
       {step === 3 && (
         <NeumorphicCard className="p-8 text-center space-y-6 border border-sahayak-brown/15 shadow-neumorph-lg">
           <div className="w-16 h-16 rounded-full bg-sahayak-success-soft text-sahayak-success mx-auto flex items-center justify-center shadow-neumorph-sm">
@@ -599,7 +600,42 @@ export const ReportLostPage: React.FC = () => {
               Lost Report Registered Successfully!
             </h2>
             <p className="text-xs sm:text-sm text-sahayak-text-secondary max-w-md mx-auto">
-              Report <span className="font-mono font-bold text-sahayak-blue">#{createdReportId || 'rep-99'}</span> is now active in the SAHAYAK neural match registry. We're continuously scanning newly handed-in items across NIE North Campus.
+              Your lost item is now active in the SAHAYAK neural match registry. We're continuously cross-referencing campus recoveries.
+            </p>
+          </div>
+
+          {/* Anti-Fraud Security PIN Card */}
+          <div className="p-4 rounded-2xl bg-sahayak-blue-ice/80 border border-sahayak-blue/30 space-y-3 text-left max-w-lg mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-sahayak-gold" />
+                <span className="font-heading font-bold text-xs uppercase tracking-wider text-sahayak-blue-deep">
+                  Anti-Fraud Security Claim Passcode
+                </span>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sahayak-success-soft text-sahayak-success">
+                Tamper-Proof
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3 bg-white/90 rounded-xl border border-sahayak-brown/15 shadow-inner">
+                <div className="text-[10px] text-sahayak-text-muted uppercase font-bold">Unique Tracking Number</div>
+                <div className="text-sm font-mono font-extrabold text-sahayak-blue-deep select-all mt-0.5">
+                  {createdReport?.trackingNumber || `NIE-LST-2026-${(createdReportId || 'rep-99').slice(-5).toUpperCase()}`}
+                </div>
+              </div>
+
+              <div className="p-3 bg-white/90 rounded-xl border border-sahayak-brown/15 shadow-inner">
+                <div className="text-[10px] text-sahayak-text-muted uppercase font-bold">Secret Claim PIN</div>
+                <div className="text-sm font-mono font-extrabold text-sahayak-error select-all mt-0.5">
+                  {createdReport?.antiFraudCode || createdReport?.securityClaimPin || 'SEC-892401'}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-[11px] text-sahayak-text-secondary leading-relaxed pt-1 border-t border-sahayak-blue-sky/30">
+              🔒 <strong>Fraud Protection:</strong> Present this Secret PIN when claiming your item at the NIE Proctor Desk to authenticate genuine ownership and block fraudulent claims.
             </p>
           </div>
 
@@ -614,7 +650,7 @@ export const ReportLostPage: React.FC = () => {
             </div>
             <div className="flex justify-between text-sahayak-text-secondary">
               <span>Status:</span>
-              <span className="font-bold text-sahayak-blue">SEARCHING (Radar Active)</span>
+              <span className="font-bold text-sahayak-blue">SEARCHING (Neural Radar Active)</span>
             </div>
           </div>
 

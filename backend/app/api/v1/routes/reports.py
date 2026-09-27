@@ -27,10 +27,18 @@ def format_report_dict(r: ItemReport) -> dict:
                 "uploadedAt": img.created_at.isoformat() if img.created_at else None
             })
 
+    track_no = r.tracking_number or f"NIE-{r.report_type[:3]}-{r.id[-5:].upper()}"
+    anti_fraud = r.anti_fraud_code or f"SEC-{abs(hash(r.id)) % 900000 + 100000}"
+
     return {
         "id": r.id,
         "type": r.report_type,
         "report_type": r.report_type,
+        "trackingNumber": track_no,
+        "tracking_number": track_no,
+        "antiFraudCode": anti_fraud,
+        "anti_fraud_code": anti_fraud,
+        "securityClaimPin": anti_fraud,
         "title": r.title,
         "category": r.category,
         "description": r.description,
@@ -49,6 +57,7 @@ def format_report_dict(r: ItemReport) -> dict:
         "size": r.size,
         "distinguishingFeatures": r.distinguishing_marks,
         "distinguishing_marks": r.distinguishing_marks,
+        "serial_number": r.serial_number,
         "status": r.status,
         "rewardPointsEligible": r.reward_points_eligible,
         "isAnonymous": r.is_anonymous,

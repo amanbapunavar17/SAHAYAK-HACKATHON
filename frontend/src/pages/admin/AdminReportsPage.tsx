@@ -40,10 +40,14 @@ export const AdminReportsPage: React.FC = () => {
 
   const filtered = reports.filter(r => {
     const matchesType = typeFilter === 'ALL' || r.type === typeFilter;
-    const matchesSearch = r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.reporterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.reporterUSN.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          r.incidentPlace.toLowerCase().includes(searchQuery.toLowerCase());
+    const title = r.title || '';
+    const reporterName = r.reporterName || '';
+    const reporterUSN = r.reporterUSN || '';
+    const incidentPlace = r.incidentPlace || '';
+    const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          reporterName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          reporterUSN.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                          incidentPlace.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesType && matchesSearch;
   });
 

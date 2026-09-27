@@ -38,10 +38,16 @@ export const StudentDashboardPage: React.FC = () => {
       setLoading(true);
       try {
         const [rList, mList] = await Promise.all([
-          api.reports.list(),
+          currentUser?.id ? api.reports.list({ reporter_id: currentUser.id }) : api.reports.list(),
           api.matches.list()
         ]);
-        setReports(rList || []);
+        const userReports = (rList || []).filter(r => 
+          !currentUser?.id || 
+          r.reporterId === currentUser.id || 
+          (currentUser.usn && r.reporterUSN === currentUser.usn) || 
+          (currentUser.email && r.reporterName === currentUser.email)
+        );
+        setReports(userReports);
         setMatches(mList || []);
       } catch (err) {
         console.warn('Live dashboard fetch error:', err);
@@ -50,7 +56,7 @@ export const StudentDashboardPage: React.FC = () => {
       }
     }
     loadData();
-  }, []);
+  }, [currentUser?.id, currentUser?.usn, currentUser?.email]);
 
   const activeReports = (reports || []).filter(r => r.status !== 'RETURNED' && r.status !== 'SAFELY_RETURNED');
   const userMatches = (matches || []).slice(0, 3);
@@ -173,7 +179,7 @@ export const StudentDashboardPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-lg text-sahayak-blue-deep">
-              Campus Reports Feed ({reports.length})
+              My Reported Items ({reports.length})
             </h2>
             <Link
               to="/student/reports"

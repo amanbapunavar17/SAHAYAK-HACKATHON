@@ -17,7 +17,9 @@ import {
   User, 
   ShieldCheck, 
   Eye, 
-  ArrowRight
+  ArrowRight,
+  KeyRound,
+  Copy
 } from 'lucide-react';
 
 export const ReportDetailPage: React.FC = () => {
@@ -144,6 +146,58 @@ export const ReportDetailPage: React.FC = () => {
                   <span className="text-sahayak-text-muted">Color:</span> <strong>{report.color}</strong>
                 </div>
               )}
+            </div>
+
+            {/* Anti-Fraud Case Tracking & Security Verification Pass */}
+            <div className="mt-4 p-4 rounded-xl bg-gradient-to-br from-sahayak-blue-deep to-sahayak-blue text-white space-y-3 shadow-neumorph-sm">
+              <div className="flex items-center justify-between border-b border-white/20 pb-2">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-sahayak-gold" />
+                  <span className="font-heading font-bold text-xs uppercase tracking-wider text-sahayak-gold">
+                    Anti-Fraud Identity & Claim Pass
+                  </span>
+                </div>
+                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded font-mono">OFFICIAL RECORD</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-white/10 p-2.5 rounded-lg space-y-1">
+                  <span className="text-[10px] text-white/70">Unique Tracking Number:</span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-bold text-xs text-white">
+                      {report.trackingNumber || `NIE-TRK-${report.id.substring(0, 8).toUpperCase()}`}
+                    </span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(report.trackingNumber || report.id)}
+                      className="text-white/70 hover:text-white p-0.5"
+                      title="Copy Tracking Number"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-white/10 p-2.5 rounded-lg space-y-1 border border-sahayak-gold/30">
+                  <span className="text-[10px] text-sahayak-gold font-semibold flex items-center gap-1">
+                    <KeyRound className="w-3 h-3" /> Security Claim PIN:
+                  </span>
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono font-black text-sm text-sahayak-gold">
+                      {report.antiFraudCode || 'SEC-VERIFY'}
+                    </span>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(report.antiFraudCode || '')}
+                      className="text-sahayak-gold/80 hover:text-sahayak-gold p-0.5"
+                      title="Copy Security Claim PIN"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-white/75 leading-tight">
+                🔒 Present this Unique Tracking Number & Secret PIN at the NIE Proctor Office or Security Desk to authenticate your claim and prevent imposter fraud.
+              </p>
             </div>
           </div>
         </div>

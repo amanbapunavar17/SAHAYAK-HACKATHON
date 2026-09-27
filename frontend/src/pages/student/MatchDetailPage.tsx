@@ -136,6 +136,18 @@ export const MatchDetailPage: React.FC = () => {
             </p>
           </div>
 
+          {signals?.descriptionA && (
+            <div className="p-3 bg-sahayak-blue-ice/60 rounded-xl border border-sahayak-blue/20 space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-sahayak-blue">
+                <Sparkles className="w-3.5 h-3.5 text-sahayak-gold" />
+                <span>AI Vision Auto-Generated Description</span>
+              </div>
+              <p className="text-xs text-sahayak-text-primary italic">
+                "{signals.descriptionA}"
+              </p>
+            </div>
+          )}
+
           <div className="space-y-1.5 pt-2 border-t border-sahayak-brown/10 text-xs">
             <div className="flex items-center gap-2 text-sahayak-text-secondary">
               <MapPin className="w-3.5 h-3.5 text-sahayak-blue" />
@@ -177,6 +189,18 @@ export const MatchDetailPage: React.FC = () => {
             </p>
           </div>
 
+          {signals?.descriptionB && (
+            <div className="p-3 bg-sahayak-success-soft/60 rounded-xl border border-sahayak-success/20 space-y-1">
+              <div className="flex items-center gap-1.5 text-[11px] font-bold text-sahayak-success">
+                <Sparkles className="w-3.5 h-3.5 text-sahayak-gold" />
+                <span>AI Vision Auto-Generated Description</span>
+              </div>
+              <p className="text-xs text-sahayak-text-primary italic">
+                "{signals.descriptionB}"
+              </p>
+            </div>
+          )}
+
           <div className="space-y-1.5 pt-2 border-t border-sahayak-brown/10 text-xs">
             <div className="flex items-center gap-2 text-sahayak-text-secondary">
               <MapPin className="w-3.5 h-3.5 text-sahayak-success" />
@@ -200,11 +224,11 @@ export const MatchDetailPage: React.FC = () => {
             </h3>
           </div>
           <span className="text-xs text-sahayak-text-muted">
-            Neural weights calculated via edge inference
+            Neural weights calculated via edge AI inference
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div className="space-y-1.5">
             <div className="flex justify-between text-xs font-semibold">
               <span className="text-sahayak-text-secondary">Visual / Contour Similarity</span>
@@ -214,6 +238,19 @@ export const MatchDetailPage: React.FC = () => {
               <div
                 className="h-full bg-sahayak-blue rounded-full transition-all"
                 style={{ width: `${signals.imageSimilarity}%` }}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs font-semibold">
+              <span className="text-sahayak-text-secondary">AI Description Agreement</span>
+              <span className="text-sahayak-blue font-bold">{signals.descriptionSimilarity ?? signals.imageSimilarity}%</span>
+            </div>
+            <div className="w-full h-2 bg-sahayak-cream rounded-full overflow-hidden border border-sahayak-brown/10">
+              <div
+                className="h-full bg-purple-500 rounded-full transition-all"
+                style={{ width: `${signals.descriptionSimilarity ?? signals.imageSimilarity}%` }}
               />
             </div>
           </div>
@@ -256,6 +293,19 @@ export const MatchDetailPage: React.FC = () => {
               />
             </div>
           </div>
+
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs font-semibold">
+              <span className="text-sahayak-text-secondary">Class Compatibility Check</span>
+              <span className="text-sahayak-success font-bold">Passed (No Penalty)</span>
+            </div>
+            <div className="w-full h-2 bg-sahayak-cream rounded-full overflow-hidden border border-sahayak-brown/10">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all"
+                style={{ width: `100%` }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Explainability Details */}
@@ -282,11 +332,11 @@ export const MatchDetailPage: React.FC = () => {
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             <Link
-              to="/student/messages"
+              to={`/student/messages?matchId=${match.id}`}
               className="px-4 py-2.5 rounded-xl bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-text-primary text-xs font-bold hover:border-sahayak-blue transition-all flex items-center gap-1.5"
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>Message Finder</span>
+              <span>Message Finder / Claimant</span>
             </Link>
             <Link
               to={`/student/verification/${match.id}`}

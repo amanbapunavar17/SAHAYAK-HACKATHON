@@ -137,7 +137,13 @@ export interface ItemReport {
   size?: string;
   distinguishingFeatures?: string;
   identifyingMarks?: string;
+  serialNumber?: string;
   secretVerificationClue?: string;
+  
+  // Anti-Fraud & Verification Code
+  trackingNumber?: string;
+  antiFraudCode?: string;
+  securityClaimPin?: string;
   
   rewardPointsEligible?: number;
   createdAt?: string;
@@ -156,6 +162,11 @@ export interface MatchSignal {
   timeScore?: number;
   timeProximityScore?: number;
   attributeMatchScore?: number;
+  descriptionA?: string;
+  descriptionB?: string;
+  descriptionSimilarity?: number;
+  classPenalty?: number;
+  classCompatible?: boolean;
   reasons: string[];
 }
 

@@ -55,7 +55,9 @@ class ItemReport(Base):
     distinguishing_marks = Column(Text, nullable=True)
     serial_number = Column(String(100), nullable=True)
     
-    # Protected ownership clues (stored securely, not returned to claimant)
+    # Anti-Fraud & Unique Verification Tracking
+    tracking_number = Column(String(64), nullable=True, index=True)
+    anti_fraud_code = Column(String(32), nullable=True, index=True)
     secret_verification_clue = Column(Text, nullable=True)
     
     # Status & Workflow
