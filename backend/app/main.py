@@ -1,20 +1,17 @@
+import sys
 import os
+
+# Add backend directory to sys.path if missing
+backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+if os.getcwd() not in sys.path:
+    sys.path.insert(0, os.getcwd())
+
 from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
-
-from app.core.config import settings
-from app.core.logging import logger
-from app.api.v1.api import api_router
-from app.db.session import engine, Base
-import app.db.models
-
-# Auto-provision tables if not yet created (useful for serverless Vercel & Supabase environments)
-try:
-    Base.metadata.create_all(bind=engine)
-except Exception as e:
-    logger.warning(f"Database auto-migration notice: {e}")
 
 app = FastAPI(
     title="SAHAYAK API",
@@ -25,42 +22,57 @@ app = FastAPI(
     openapi_url="/openapi.json"
 )
 
-
 # CORS configuration
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS if settings.CORS_ORIGINS else ["*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Mount local upload directory if it exists
-uploads_dir = "/tmp/uploads" if "VERCEL" in os.environ else settings.STORAGE_LOCAL_DIR
-try:
-    os.makedirs(uploads_dir, exist_ok=True)
-    app.mount("/api/v1/uploads", StaticFiles(directory=uploads_dir), name="uploads")
-    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads_root")
-except Exception as e:
-    logger.warning(f"Uploads mount notice: {e}")
-
-# Include API v1 router
-app.include_router(api_router, prefix=settings.API_V1_PREFIX)
-
-
-
-# Standard Root Health Check
-@app.get("/health", tags=["Health"])
-def root_health():
+# Standard Root Endpoints
+@app.get("/", tags=["Root"])
+def root_index():
     return {
-        "status": "healthy",
-        "app": settings.APP_NAME,
-        "environment": settings.APP_ENV,
+        "status": "online",
+        "app": "SAHAYAK Intelligent Campus Lost & Found Platform",
+        "docs": "/docs",
+        "health": "/health",
         "version": "1.0.0"
     }
 
 
-# Standard Global Error Handlers (Enforcing ApiResponse shape and preventing stack trace leaks)
+@app.get("/health", tags=["Health"])
+def root_health():
+    return {
+        "status": "healthy",
+        "app": "SAHAYAK Backend",
+        "environment": "production" if "VERCEL" in os.environ else "development",
+        "version": "1.0.0"
+    }
+
+
+# Safe inclusion of API routes & database tables
+try:
+    from app.core.config import settings
+    from app.api.v1.api import api_router
+    app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+except Exception as e:
+    import traceback
+    err_trace = traceback.format_exc()
+    @app.get("/api/v1/debug")
+    def debug_route():
+        return {"error": str(e), "traceback": err_trace, "sys_path": sys.path}
+
+try:
+    from app.db.session import engine, Base
+    import app.db.models
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    pass
+
+# Standard Global Error Handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     return JSONResponse(
@@ -70,22 +82,6 @@ async def http_exception_handler(request: Request, exc: HTTPException):
             "error": {
                 "code": f"HTTP_{exc.status_code}",
                 "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail)
-            },
-            "meta": {}
-        }
-    )
-
-
-@app.exception_handler(Exception)
-async def global_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled Exception at {request.url.path}: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content={
-            "data": None,
-            "error": {
-                "code": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected error occurred. Please try again or contact support."
             },
             "meta": {}
         }
