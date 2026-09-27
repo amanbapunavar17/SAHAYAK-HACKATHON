@@ -7,6 +7,14 @@ from fastapi.staticfiles import StaticFiles
 from app.core.config import settings
 from app.core.logging import logger
 from app.api.v1.api import api_router
+from app.db.session import engine, Base
+import app.db.models
+
+# Auto-provision tables if not yet created (useful for serverless Vercel & Supabase environments)
+try:
+    Base.metadata.create_all(bind=engine)
+except Exception as e:
+    logger.warning(f"Database auto-migration notice: {e}")
 
 app = FastAPI(
     title="SAHAYAK API",
@@ -16,6 +24,7 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json"
 )
+
 
 # CORS configuration
 app.add_middleware(
@@ -27,13 +36,17 @@ app.add_middleware(
 )
 
 # Mount local upload directory if it exists
-uploads_dir = settings.STORAGE_LOCAL_DIR
-os.makedirs(uploads_dir, exist_ok=True)
-app.mount("/api/v1/uploads", StaticFiles(directory=uploads_dir), name="uploads")
-app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads_root")
+uploads_dir = "/tmp/uploads" if "VERCEL" in os.environ else settings.STORAGE_LOCAL_DIR
+try:
+    os.makedirs(uploads_dir, exist_ok=True)
+    app.mount("/api/v1/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+    app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads_root")
+except Exception as e:
+    logger.warning(f"Uploads mount notice: {e}")
 
 # Include API v1 router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
+
 
 
 # Standard Root Health Check
