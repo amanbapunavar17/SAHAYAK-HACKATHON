@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
 import { reportsService, assistantService } from '../../lib/services';
+import { api } from '../../lib/api';
 import { ItemCategory, ImageSource } from '../../types';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { SAHAYAKThread } from '../../components/ui/SAHAYAKThread';
@@ -19,7 +20,10 @@ import {
   Award,
   Image as ImageIcon,
   Camera,
-  X
+  X,
+  Search,
+  Tag,
+  Loader2
 } from 'lucide-react';
 
 const CATEGORIES: ItemCategory[] = [
@@ -58,6 +62,8 @@ export const ReportFoundPage: React.FC = () => {
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [missingReports, setMissingReports] = useState<any[]>([]);
+  const [loadingMissing, setLoadingMissing] = useState(false);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -70,13 +76,30 @@ export const ReportFoundPage: React.FC = () => {
 
   // Found Image (Required)
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string>('https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60');
+  const [imagePreview, setImagePreview] = useState<string>('');
   const [imageSource, setImageSource] = useState<ImageSource>('USER_CAPTURED');
   const [dragActive, setDragActive] = useState(false);
 
   const [aiAssisting, setAiAssisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadMissing() {
+      setLoadingMissing(true);
+      try {
+        const lost = await api.reports.list({ type: 'LOST' });
+        if (Array.isArray(lost)) {
+          setMissingReports(lost);
+        }
+      } catch (err) {
+        console.warn('Failed to load lost reports:', err);
+      } finally {
+        setLoadingMissing(false);
+      }
+    }
+    loadMissing();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -202,54 +225,43 @@ export const ReportFoundPage: React.FC = () => {
 
           <div className="space-y-3">
             <h3 className="font-heading font-bold text-xs uppercase tracking-wider text-sahayak-text-muted">
-              Active Missing Item Reports on NIE North
+              Active Missing Item Reports on NIE North ({missingReports.length})
             </h3>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sahayak-blue-ice text-sahayak-blue flex items-center justify-center font-bold text-xs">
-                    LAPTOP
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-sahayak-text-primary">HP Pavilion Laptop</h4>
-                    <p className="text-[11px] text-sahayak-text-muted">Lost by Rahul (4NI21CS089)</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setTitle('HP Pavilion Laptop');
-                    setCategory('ELECTRONICS');
-                    setStep(2);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-sahayak-blue text-white text-xs font-bold"
-                >
-                  This Is It
-                </button>
+            {missingReports.length === 0 ? (
+              <div className="p-4 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 text-center text-xs text-sahayak-text-secondary">
+                No active lost reports currently awaiting recovery in the database. Proceed below to submit your found item.
               </div>
-
-              <div className="p-3.5 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-sahayak-gold-soft text-sahayak-blue-deep flex items-center justify-center font-bold text-xs">
-                    CALC
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-sahayak-text-primary">Casio fx-991EX Calculator</h4>
-                    <p className="text-[11px] text-sahayak-text-muted">Lost by Karthik (4NI21EC045)</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setTitle('Casio Scientific fx-991EX');
-                    setCategory('CALCULATORS');
-                    setStep(2);
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-sahayak-blue text-white text-xs font-bold"
-                >
-                  This Is It
-                </button>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {missingReports
+                  .filter(item => !searchQuery || item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.incidentPlace?.toLowerCase().includes(searchQuery.toLowerCase()))
+                  .slice(0, 4)
+                  .map((item) => (
+                    <div key={item.id} className="p-3.5 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-xl bg-sahayak-blue-ice text-sahayak-blue flex items-center justify-center font-bold text-xs shrink-0">
+                          <Tag className="w-4 h-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-xs text-sahayak-text-primary truncate">{item.title}</h4>
+                          <p className="text-[11px] text-sahayak-text-muted truncate">{item.incidentPlace}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setTitle(item.title);
+                          setCategory(item.category || 'OTHER');
+                          setStep(2);
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-sahayak-blue text-white text-xs font-bold shrink-0 ml-2"
+                      >
+                        This Is It
+                      </button>
+                    </div>
+                  ))}
               </div>
-            </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-sahayak-brown/10 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -424,24 +436,31 @@ export const ReportFoundPage: React.FC = () => {
               {/* Preview & Image URL Alternative */}
               <div className="flex flex-col sm:flex-row gap-4 items-center pt-2">
                 <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-sahayak-brown/20 shadow-sm shrink-0 bg-sahayak-cream-soft flex items-center justify-center">
-                  <img
-                    src={imagePreview}
-                    alt="Found Preview"
-                    className="w-full h-full object-cover"
-                  />
-                  {imageFile && (
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setImageFile(null);
-                        setImagePreview('https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60');
-                      }}
-                      className="absolute top-1 right-1 p-1 rounded-full bg-sahayak-error text-white hover:opacity-90 shadow-sm"
-                      title="Remove custom photo"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
+                  {imagePreview ? (
+                    <>
+                      <img
+                        src={imagePreview}
+                        alt="Found Preview"
+                        className="w-full h-full object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setImageFile(null);
+                          setImagePreview('');
+                        }}
+                        className="absolute top-1 right-1 p-1 rounded-full bg-sahayak-error text-white hover:opacity-90 shadow-sm"
+                        title="Remove custom photo"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-sahayak-text-muted p-2 text-center">
+                      <ImageIcon className="w-6 h-6 text-sahayak-brown/40" />
+                      <span className="text-[9px] mt-1 font-bold">No Image</span>
+                    </div>
                   )}
                 </div>
 

@@ -108,28 +108,27 @@ export const LandingPage: React.FC = () => {
                 </span>
               </div>
 
-              {/* Sample Live Matched Item */}
+              {/* Live Matching Engine Overview */}
               <div className="mt-4 p-4 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 space-y-3">
-                <div className="flex gap-3">
-                  <img
-                    src="https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400&auto=format&fit=crop&q=60"
-                    alt="Smart Watch"
-                    className="w-16 h-16 rounded-xl object-cover border border-sahayak-brown/15 shadow-sm"
-                  />
-                  <div className="flex-1">
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-sahayak-blue-ice text-sahayak-blue flex items-center justify-center font-bold shrink-0">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+                  <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h4 className="font-heading font-bold text-sm text-sahayak-text-primary">Noise ColorFit Pro 4</h4>
-                      <span className="text-xs font-bold text-sahayak-blue bg-sahayak-blue-ice px-2 py-0.5 rounded">94% Signal</span>
+                      <h4 className="font-heading font-bold text-sm text-sahayak-text-primary">Multi-Signal Cross-Match</h4>
+                      <span className="text-xs font-bold text-sahayak-blue bg-sahayak-blue-ice px-2 py-0.5 rounded">Real-Time</span>
                     </div>
-                    <p className="text-xs text-sahayak-text-secondary mt-0.5">Found at Sir MV Block, 2nd Floor Lab</p>
-                    <p className="text-[11px] text-sahayak-text-muted mt-1">Secured at: Main Security Desk Locker #3</p>
+                    <p className="text-xs text-sahayak-text-secondary mt-0.5">
+                      Visual embedding, time proximity, geo-location, and item attributes computed instantly across all NIE North zones.
+                    </p>
                   </div>
                 </div>
 
                 <div className="pt-2 flex items-center justify-between text-xs border-t border-sahayak-brown/10">
-                  <span className="text-sahayak-text-muted">Handover State: Verified Pending</span>
+                  <span className="text-sahayak-text-muted">Proctor-Verified Custody Lockers</span>
                   <Link to="/login" className="text-sahayak-blue font-bold hover:underline flex items-center gap-1">
-                    Claim Item <ArrowRight className="w-3 h-3" />
+                    Student Login <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
               </div>
