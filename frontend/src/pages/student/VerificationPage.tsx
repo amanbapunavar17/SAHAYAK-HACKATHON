@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../lib/authContext';
+import { api } from '../../lib/api';
 import { verificationService, matchingService } from '../../lib/services';
 import { VerificationCase, MatchItem } from '../../types';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
@@ -17,15 +19,20 @@ import {
   QrCode,
   Building,
   UserCheck,
-  Sparkles
+  Sparkles,
+  Award,
+  Loader2
 } from 'lucide-react';
 
 export const VerificationPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { studentUser, refreshProfile } = useAuth();
   const [match, setMatch] = useState<MatchItem | null>(null);
   const [activeCase, setActiveCase] = useState<VerificationCase | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [approvalNotice, setApprovalNotice] = useState<string | null>(null);
 
   // Verification Form State
   const [answers, setAnswers] = useState({
@@ -45,10 +52,21 @@ export const VerificationPage: React.FC = () => {
 
         // Check if there is an existing verification case for this match
         const cases = await verificationService.getAllCases();
-        const foundCase = cases.find(c => c.matchId === id || c.id === id);
+        const foundCase = cases.find(c => c.id === id || c.matchId === id || c.reportId === id);
         if (foundCase) {
           setActiveCase(foundCase);
           setSubmitted(true);
+        } else {
+          // Check backend for case
+          try {
+            const liveCase = await api.verification.getCase(id);
+            if (liveCase && liveCase.id) {
+              setActiveCase(liveCase);
+              setSubmitted(true);
+            }
+          } catch (e) {
+            // Case not yet created
+          }
         }
       } finally {
         setLoading(false);
@@ -66,9 +84,24 @@ export const VerificationPage: React.FC = () => {
     setIsVerifying(true);
 
     try {
+      const clueList = [answers.clue1, answers.clue2, answers.clue3].filter(Boolean);
+      if (activeCase && activeCase.id) {
+        try {
+          const res = await api.verification.submitAnswers(activeCase.id, clueList);
+          if (res) {
+            setActiveCase(res);
+            setSubmitted(true);
+            await refreshProfile();
+            return;
+          }
+        } catch (liveErr) {
+          console.warn('Live submit fallback:', liveErr);
+        }
+      }
+
       const newCase = await verificationService.submitVerification(
         id || 'm-1',
-        [answers.clue1, answers.clue2, answers.clue3].filter(Boolean)
+        clueList
       );
       setActiveCase(newCase);
       setSubmitted(true);
@@ -76,6 +109,44 @@ export const VerificationPage: React.FC = () => {
       setIsVerifying(false);
     }
   };
+
+  const handleSimulateProctorApproval = async () => {
+    if (!activeCase) return;
+    setIsSimulating(true);
+    try {
+      // 1. Call Backend Proctor Approval endpoint
+      try {
+        await api.verification.manualReview(
+          activeCase.id,
+          'APPROVE',
+          'Proctor verified physical possession and matched claimant answers.'
+        );
+      } catch (e) {
+        console.warn('Backend proctor approval notice:', e);
+      }
+
+      // 2. Update local state & case
+      const updated = verificationService.verifyCase(activeCase.id, 'SEC-01', 'NIE-8842');
+      if (updated) {
+        setActiveCase(updated);
+      } else {
+        setActiveCase({
+          ...activeCase,
+          status: 'VERIFIED',
+          handoverOtp: 'NIE-8842',
+          handoverStatus: 'SCHEDULED',
+          assignedStaff: 'NIE Campus Proctor Desk'
+        });
+      }
+
+      // 3. Refresh logged in user profile so reward points and leaderboard sync immediately
+      await refreshProfile();
+      setApprovalNotice('Proctor Approved! +75 Good Samaritan points successfully awarded to the finder.');
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -186,17 +257,30 @@ export const VerificationPage: React.FC = () => {
             </div>
           </div>
 
+          {approvalNotice && (
+            <div className="p-3 bg-sahayak-success-soft border border-sahayak-success/30 rounded-xl text-xs text-sahayak-success font-bold flex items-center justify-center gap-2 animate-fadeIn">
+              <Award className="w-4 h-4 text-sahayak-gold" />
+              <span>{approvalNotice}</span>
+            </div>
+          )}
+
           <div className="pt-2 flex justify-center gap-3">
             <button
-              onClick={() => {
-                // Simulate Proctor approving verification for prototype demo
-                const updated = verificationService.verifyCase(activeCase.id, 'SEC-01', 'NIE-8842');
-                if (updated) setActiveCase(updated);
-              }}
-              className="px-4 py-2.5 rounded-xl bg-sahayak-gold text-sahayak-blue-deep text-xs font-bold shadow-neumorph hover:bg-sahayak-gold-light transition-all flex items-center gap-2"
+              onClick={handleSimulateProctorApproval}
+              disabled={isSimulating}
+              className="px-5 py-3 rounded-xl bg-sahayak-gold text-sahayak-blue-deep text-xs font-bold shadow-neumorph hover:bg-sahayak-gold-light transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Simulate Proctor Instant Approval</span>
+              {isSimulating ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin text-sahayak-blue-deep" />
+                  <span>Approving & Crediting Finder Points...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Simulate Proctor Instant Approval (+75 Pts to Finder)</span>
+                </>
+              )}
             </button>
           </div>
         </NeumorphicCard>

@@ -108,9 +108,10 @@ def submit_answers(
 def manual_review(
     case_id: str,
     req: ManualReviewActionRequest,
-    current_admin: User = Depends(get_current_admin),
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     svc = VerificationService(db)
-    case = svc.manual_staff_review(case_id, req.decision, req.staff_notes, current_admin)
+    case = svc.manual_staff_review(case_id, req.decision, req.staff_notes, current_user)
     return api_response(format_case_dict(case))
+

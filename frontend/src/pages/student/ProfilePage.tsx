@@ -361,7 +361,9 @@ export const ProfilePage: React.FC = () => {
       <CertificateModal
         isOpen={showCert}
         onClose={() => setShowCert(false)}
-        recipientName={studentUser?.fullName || studentUser?.name || 'Rahul Sharma'}
+        recipientName={studentUser?.fullName || studentUser?.name || 'Shaik Zayan Ahmed'}
+        usn={studentUser?.usn}
+        department={studentUser?.department || (studentUser as any)?.branch}
         itemTitle="HP Pavilion Laptop"
         date={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         pointsAwarded={studentUser?.points || 240}
@@ -369,3 +371,4 @@ export const ProfilePage: React.FC = () => {
     </div>
   );
 };
+

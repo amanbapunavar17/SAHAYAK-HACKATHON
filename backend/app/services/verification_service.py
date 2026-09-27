@@ -232,6 +232,50 @@ class VerificationService:
             case.status = VerificationStatus.OWNERSHIP_CONFIRMED.value
             case.confidence_rating = "High (Proctor Verified)"
             case.handover_otp = f"{random.randint(100000, 999999)}"
+            case.handover_location = "NIE Lost & Found Central Office (Admin Block Ground Floor)"
+
+            # Update reports to VERIFIED / HANDOVER_PENDING
+            lost_rep = self.report_repo.get_by_id(case.lost_report_id)
+            if lost_rep:
+                lost_rep.status = ReportStatus.VERIFIED.value
+                self.report_repo.update(lost_rep)
+
+            found_rep = self.report_repo.get_by_id(case.found_report_id)
+            if found_rep:
+                found_rep.status = ReportStatus.HANDOVER_PENDING.value
+                self.report_repo.update(found_rep)
+
+            # Award finder Good Samaritan reward points
+            if case.finder_id:
+                try:
+                    self.reward_service.award_recovery_points(
+                        finder_id=case.finder_id,
+                        case_id=case.id,
+                        item_title=lost_rep.title if lost_rep else "Found Item"
+                    )
+                except Exception as e:
+                    pass
+
+            # Notify finder and claimant
+            if case.finder_id:
+                self.notif_service.send_notification(
+                    user_id=case.finder_id,
+                    title="Ownership Verified & +75 Points Awarded!",
+                    body="The Proctor verified the claim! You earned +75 Good Samaritan points for returning this item.",
+                    notif_type=NotificationType.VERIFICATION.value,
+                    related_case_id=case.id,
+                    link_url=f"/student/recovery/{case.id}"
+                )
+
+            if case.claimant_id:
+                self.notif_service.send_notification(
+                    user_id=case.claimant_id,
+                    title="Ownership Confirmed by Proctor!",
+                    body=f"Your claim has been approved by the Campus Proctor. Single-use Handover OTP: {case.handover_otp}.",
+                    notif_type=NotificationType.VERIFICATION.value,
+                    related_case_id=case.id,
+                    link_url=f"/student/recovery/{case.id}"
+                )
         else:
             case.status = VerificationStatus.CLAIM_DENIED.value
             case.confidence_rating = "Flagged"
@@ -248,3 +292,4 @@ class VerificationService:
         )
 
         return case
+

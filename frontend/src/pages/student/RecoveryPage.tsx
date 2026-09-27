@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { verificationService } from '../../lib/services';
+import { useAuth } from '../../lib/authContext';
+import { api } from '../../lib/api';
+import { verificationService, reportsService } from '../../lib/services';
 import { VerificationCase } from '../../types';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { SAHAYAKThread } from '../../components/ui/SAHAYAKThread';
@@ -16,23 +18,26 @@ import {
   MapPin, 
   Clock,
   UserCheck,
-  Sparkles
+  Sparkles,
+  CheckCheck
 } from 'lucide-react';
 
 export const RecoveryPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [activeCase, setActiveCase] = useState<VerificationCase | null>(null);
+  const { studentUser, refreshProfile } = useAuth();
+  const [activeCase, setActiveCase] = useState<VerificationCase | any | null>(null);
   const [loading, setLoading] = useState(true);
   const [showCertificate, setShowCertificate] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   useEffect(() => {
     async function loadCase() {
       try {
         const cases = await verificationService.getAllCases();
-        const found = cases.find(c => c.id === id || c.matchId === id) || cases[0];
+        const found = cases.find(c => c.id === id || c.matchId === id || c.reportId === id) || cases[0];
         setActiveCase(found || null);
-        if (found?.handoverStatus === 'COMPLETED') {
+        if (found?.handoverStatus === 'COMPLETED' || found?.status === 'COMPLETED' || found?.status === 'RESOLVED') {
           setIsCompleted(true);
         }
       } finally {
@@ -46,12 +51,43 @@ export const RecoveryPage: React.FC = () => {
     return <LoadingState message="Loading handover coordinates..." />;
   }
 
-  const handleSimulateHandover = () => {
+  const handleSimulateHandover = async () => {
     if (!activeCase) return;
-    verificationService.completeHandover(activeCase.id);
-    setIsCompleted(true);
-    setShowCertificate(true);
+    setIsConfirming(true);
+    try {
+      // 1. Mark verification case as COMPLETED & RESOLVED locally
+      verificationService.completeHandover(activeCase.id);
+
+      // 2. Mark related reports as RESOLVED / SAFELY_RETURNED in local services
+      if (activeCase.reportId) {
+        reportsService.updateStatus(activeCase.reportId, 'RESOLVED');
+      }
+      if (activeCase.lostReportId) {
+        reportsService.updateStatus(activeCase.lostReportId, 'RETURNED');
+      }
+      if (activeCase.foundReportId) {
+        reportsService.updateStatus(activeCase.foundReportId, 'SAFELY_RETURNED');
+      }
+
+      // 3. Confirm via backend API
+      try {
+        await api.handover.confirm(activeCase.id, 'RECIPIENT_RETURN_CONFIRM', activeCase.handoverOtp || 'NIE-8842');
+      } catch (err) {
+        console.warn('Backend handover confirm note:', err);
+      }
+
+      // 4. Refresh user profile to credit reward points to finder and sync leaderboard
+      await refreshProfile();
+
+      setIsCompleted(true);
+      setShowCertificate(true);
+    } finally {
+      setIsConfirming(false);
+    }
   };
+
+  const recipientName = studentUser?.fullName || studentUser?.name || activeCase?.finderName || 'Shaik Zayan Ahmed';
+  const itemName = activeCase?.lostReport?.title || activeCase?.foundReport?.title || 'Verified Campus Recovery';
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -97,7 +133,7 @@ export const RecoveryPage: React.FC = () => {
               </p>
             </div>
             <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sahayak-success-soft text-sahayak-success">
-              {isCompleted ? 'CLAIMED & RETURNED' : 'VALID FOR 24 HOURS'}
+              {isCompleted ? 'RESOLVED & RETURNED TO OWNER' : 'VALID FOR 24 HOURS'}
             </span>
           </div>
 
@@ -108,7 +144,7 @@ export const RecoveryPage: React.FC = () => {
                 <span>Physical Custody Station</span>
               </h3>
               <p className="text-xs font-semibold text-sahayak-blue">
-                {activeCase?.handoverLocation || 'NIE Main Security Desk (Ground Floor, Main Gate)'}
+                {activeCase?.handoverLocation || 'NIE Main Security Desk (Ground Floor, Main Gate Locker #3)'}
               </p>
             </div>
 
@@ -119,8 +155,14 @@ export const RecoveryPage: React.FC = () => {
               </p>
               <p className="flex items-start gap-2">
                 <CheckCircle2 className="w-3.5 h-3.5 text-sahayak-success shrink-0 mt-0.5" />
-                <span>The proctor or security officer will verify and sign off the handover.</span>
+                <span>The proctor or security officer verifies and signs off the handover.</span>
               </p>
+              {isCompleted && (
+                <p className="flex items-start gap-2 font-semibold text-sahayak-success">
+                  <CheckCheck className="w-3.5 h-3.5 text-sahayak-success shrink-0 mt-0.5" />
+                  <span>Handover complete. Query marked as RESOLVED & +75 points credited.</span>
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -128,24 +170,25 @@ export const RecoveryPage: React.FC = () => {
         {/* Action Controls */}
         <div className="pt-4 border-t border-sahayak-brown/10 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="text-xs text-sahayak-text-muted">
-            Status: <strong className="text-sahayak-text-primary">{isCompleted ? 'Returned to Owner' : 'Ready for Pickup'}</strong>
+            Status: <strong className="text-sahayak-text-primary">{isCompleted ? 'RESOLVED (Safely Returned)' : 'Ready for Pickup'}</strong>
           </div>
 
           <div className="flex gap-3 w-full sm:w-auto">
             {!isCompleted ? (
               <button
                 onClick={handleSimulateHandover}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-sahayak-success text-white font-bold text-xs shadow-neumorph hover:bg-sahayak-success/90 transition-all flex items-center justify-center gap-2"
+                disabled={isConfirming}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-sahayak-success text-white font-bold text-xs shadow-neumorph hover:bg-sahayak-success/90 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
-                <span>Confirm Handover Completion</span>
+                <span>{isConfirming ? 'Processing Handover...' : 'Confirm Handover & Resolve Query'}</span>
               </button>
             ) : (
               <button
                 onClick={() => setShowCertificate(true)}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-sahayak-gold text-sahayak-blue-deep font-bold text-xs shadow-neumorph hover:bg-sahayak-gold-light transition-all flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-sahayak-gold text-sahayak-blue-deep font-bold text-xs shadow-neumorph hover:bg-sahayak-gold-light transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Award className="w-4 h-4" />
+                <Award className="w-4 h-4 text-sahayak-blue-deep" />
                 <span>View Finder Recognition Certificate</span>
               </button>
             )}
@@ -157,11 +200,15 @@ export const RecoveryPage: React.FC = () => {
       <CertificateModal
         isOpen={showCertificate}
         onClose={() => setShowCertificate(false)}
-        recipientName="Rahul Sharma"
-        itemTitle="Noise ColorFit Pro 4"
+        recipientName={recipientName}
+        usn={studentUser?.usn}
+        department={studentUser?.department || (studentUser as any)?.branch}
+        itemTitle={itemName}
+        caseId={activeCase?.id || id || 'NIE-8842'}
         date={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-        pointsAwarded={50}
+        pointsAwarded={75}
       />
     </div>
   );
 };
+
