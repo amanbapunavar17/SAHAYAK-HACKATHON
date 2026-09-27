@@ -21,6 +21,12 @@ export const AdminLoginPage: React.FC = () => {
   const { loginAdmin } = useAuth();
   const navigate = useNavigate();
 
+  const quickFillAdmin = () => {
+    setEmail('admin@nie.ac.in');
+    setPassword('Admin@123');
+    setError(null);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -63,6 +69,21 @@ export const AdminLoginPage: React.FC = () => {
           <p className="text-xs sm:text-sm text-sahayak-text-secondary">
             Authorized administrative & campus security access only
           </p>
+        </div>
+
+        {/* Quick Fill Test Admin */}
+        <div className="p-3 rounded-2xl bg-sahayak-cream-soft border border-sahayak-brown/15 shadow-neumorph-sm flex items-center justify-between">
+          <div>
+            <p className="text-xs font-bold text-sahayak-blue-deep">Test Admin Account</p>
+            <p className="text-[11px] text-sahayak-text-muted">admin@nie.ac.in</p>
+          </div>
+          <button
+            type="button"
+            onClick={quickFillAdmin}
+            className="px-3 py-1.5 rounded-xl bg-sahayak-blue text-sahayak-gold text-xs font-bold shadow-neumorph hover:bg-sahayak-blue-deep transition-all cursor-pointer"
+          >
+            Auto Fill
+          </button>
         </div>
 
         {/* Card Form */}

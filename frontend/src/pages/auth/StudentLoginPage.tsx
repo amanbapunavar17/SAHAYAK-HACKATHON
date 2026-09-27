@@ -22,12 +22,18 @@ export const StudentLoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { loginStudent } = useAuth();
+  const { user, isAuthenticated, loginStudent, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
   const from = (location.state as any)?.from || '/student';
   const noticeMessage = (location.state as any)?.message;
+
+  const quickFill = (userEmail: string, userPass: string) => {
+    setEmail(userEmail);
+    setPassword(userPass);
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,6 +81,59 @@ export const StudentLoginPage: React.FC = () => {
           </p>
         </div>
 
+        {/* Currently Logged In Notice */}
+        {isAuthenticated && user && (
+          <div className="p-4 rounded-2xl bg-sahayak-blue-ice/60 border border-sahayak-blue/20 flex items-center justify-between shadow-neumorph-sm">
+            <div className="text-left">
+              <p className="text-xs font-bold text-sahayak-blue-deep">
+                Active Session: {user.fullName || user.email}
+              </p>
+              <p className="text-[11px] text-sahayak-text-muted">
+                USN: {user.usn || 'Registered Student'}
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/student')}
+                className="px-3 py-1.5 rounded-lg bg-sahayak-blue text-white text-xs font-bold shadow-sm hover:bg-sahayak-blue-mid"
+              >
+                Go to Dashboard
+              </button>
+              <button
+                onClick={() => logout()}
+                className="px-2.5 py-1.5 rounded-lg bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-error text-xs font-bold hover:bg-white"
+              >
+                Log Out
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Test Accounts Bar */}
+        <div className="p-3.5 rounded-2xl bg-sahayak-cream-soft border border-sahayak-brown/15 shadow-neumorph-sm space-y-2">
+          <p className="text-[11px] font-bold text-sahayak-text-muted uppercase tracking-wider text-center">
+            Quick Fill Test Accounts (Real DB)
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => quickFill('student1@nie.ac.in', 'Student@123')}
+              className="px-2.5 py-2 rounded-xl bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-blue-deep text-xs font-bold hover:border-sahayak-blue hover:text-sahayak-blue text-left transition-all cursor-pointer shadow-neumorph-sm"
+            >
+              <span className="block font-bold">Student 1</span>
+              <span className="text-[10px] text-sahayak-text-muted font-normal block truncate">student1@nie.ac.in</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => quickFill('student2@nie.ac.in', 'Student@123')}
+              className="px-2.5 py-2 rounded-xl bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-blue-deep text-xs font-bold hover:border-sahayak-blue hover:text-sahayak-blue text-left transition-all cursor-pointer shadow-neumorph-sm"
+            >
+              <span className="block font-bold">Student 2</span>
+              <span className="text-[10px] text-sahayak-text-muted font-normal block truncate">student2@nie.ac.in</span>
+            </button>
+          </div>
+        </div>
+
         {/* Card Form */}
         <NeumorphicCard className="p-6 sm:p-8 border border-sahayak-brown/15 shadow-neumorph">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,7 +161,7 @@ export const StudentLoginPage: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. zayan@nie.ac.in or 4ni22cs142@nie.ac.in"
+                  placeholder="e.g. student1@nie.ac.in or 4ni22cs142@nie.ac.in"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-sahayak-cream border border-sahayak-brown/20 rounded-xl pl-10 pr-4 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue transition-all"
@@ -141,7 +200,7 @@ export const StudentLoginPage: React.FC = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
+              className="w-full py-3 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-50 cursor-pointer"
             >
               {loading ? (
                 <span>Checking Database...</span>
