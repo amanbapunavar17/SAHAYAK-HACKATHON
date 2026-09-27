@@ -46,6 +46,9 @@ import { AdminRewardsPage } from '../pages/admin/AdminRewardsPage';
 import { AdminAuditPage } from '../pages/admin/AdminAuditPage';
 import { AdminNotificationsPage } from '../pages/admin/AdminNotificationsPage';
 
+// AI Vision Lab
+import { AIVisionLabPage } from '../pages/student/AIVisionLabPage';
+
 // System Pages
 import { NotFoundPage } from '../pages/system/NotFoundPage';
 import { SystemErrorPage } from '../pages/system/SystemErrorPage';
@@ -62,6 +65,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="/register/:step" element={<RegisterPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/vision-lab" element={<AIVisionLabPage />} />
+        <Route path="/ai-lab" element={<AIVisionLabPage />} />
       </Route>
 
       {/* Admin Login (Isolated) */}
@@ -83,6 +88,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="rewards" element={<RewardsPage />} />
         <Route path="leaderboard" element={<LeaderboardPage />} />
         <Route path="assistant" element={<AIAssistantPage />} />
+        <Route path="vision-lab" element={<AIVisionLabPage />} />
+        <Route path="ai-lab" element={<AIVisionLabPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="settings" element={<SettingsPage />} />
@@ -101,6 +108,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="rewards" element={<AdminRewardsPage />} />
         <Route path="audit" element={<AdminAuditPage />} />
         <Route path="notifications" element={<AdminNotificationsPage />} />
+        <Route path="vision-lab" element={<AIVisionLabPage />} />
       </Route>
 
       {/* System Error & Maintenance Pages */}

@@ -19,6 +19,7 @@ const adminNavItems = [
   { name: 'Console Overview', path: '/admin', icon: LayoutDashboard, exact: true },
   { name: 'Case Management', path: '/admin/reports', icon: ClipboardList },
   { name: 'Match Analytics', path: '/admin/matches', icon: GitCompare },
+  { name: 'AI Vision Lab', path: '/admin/vision-lab', icon: Sparkles },
   { name: 'Location Heatmap', path: '/admin/locations', icon: MapPin },
   { name: 'Resolution Metrics', path: '/admin/resolution', icon: CheckCircle2 },
   { name: 'Reward Auditing', path: '/admin/rewards', icon: Award },

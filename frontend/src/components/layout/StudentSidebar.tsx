@@ -15,7 +15,8 @@ import {
   HelpCircle, 
   Shield, 
   Compass,
-  UploadCloud
+  UploadCloud,
+  Scan
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { SAHAYAKThread } from '../ui/SAHAYAKThread';
@@ -31,6 +32,7 @@ export const StudentSidebar: React.FC<StudentSidebarProps> = ({ isOpen, onClose 
     { name: 'Report Lost', path: '/student/report-lost', icon: PlusCircle },
     { name: 'Report Found', path: '/student/report-found', icon: UploadCloud },
     { name: 'Match Radar', path: '/student/matches', icon: Sparkles, badge: 'Active' },
+    { name: 'AI Vision Lab', path: '/student/vision-lab', icon: Scan, badge: 'YOLO Live' },
     { name: 'Messages & Recovery', path: '/student/messages', icon: MessageSquare },
     { name: 'Campus Map', path: '/student/map', icon: Map },
     { name: 'My Reports', path: '/student/reports', icon: FileText },

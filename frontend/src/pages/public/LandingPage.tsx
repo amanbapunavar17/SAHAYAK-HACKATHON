@@ -71,10 +71,10 @@ export const LandingPage: React.FC = () => {
             </div>
 
             {/* Main Action Buttons */}
-            <div className="flex flex-col sm:flex-row items-center gap-4 pt-2 justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row items-center gap-3 pt-2 justify-center lg:justify-start">
               <button
                 onClick={() => handleAction('/student/report-lost', 'Please sign in with your NIE institutional credentials to report a lost item.')}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 group cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 group cursor-pointer"
               >
                 <span>I Lost Something</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -82,11 +82,19 @@ export const LandingPage: React.FC = () => {
               
               <button
                 onClick={() => handleAction('/student/report-found', 'Please sign in with your NIE institutional credentials to report a found item.')}
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/20 text-sahayak-blue-deep font-heading font-bold text-sm shadow-neumorph hover:border-sahayak-blue transition-all flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/20 text-sahayak-blue-deep font-heading font-bold text-sm shadow-neumorph hover:border-sahayak-blue transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UploadCloud className="w-4 h-4 text-sahayak-blue" />
                 <span>I Found Something</span>
               </button>
+
+              <Link
+                to="/vision-lab"
+                className="w-full sm:w-auto px-5 py-3.5 rounded-xl bg-sahayak-gold-soft border border-sahayak-gold/40 text-sahayak-blue-deep font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-gold transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 text-sahayak-blue-deep" />
+                <span>AI Vision Lab</span>
+              </Link>
             </div>
 
             {/* Trust Badges */}

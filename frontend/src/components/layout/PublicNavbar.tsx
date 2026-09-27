@@ -11,6 +11,7 @@ export const PublicNavbar: React.FC = () => {
 
   const navLinks = [
     { name: 'Home', path: '/' },
+    { name: 'AI Vision Lab (YOLO)', path: '/vision-lab' },
     { name: 'FAQ & Help', path: '/help' },
     { name: 'Privacy Policy', path: '/privacy' },
   ];
