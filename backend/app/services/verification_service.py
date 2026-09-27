@@ -17,6 +17,7 @@ from app.repositories.reports import ReportRepository
 from app.repositories.matches import MatchRepository
 from app.services.audit_service import AuditService
 from app.services.notification_service import NotificationService
+from app.services.reward_service import RewardService
 
 
 class VerificationService:
@@ -28,6 +29,7 @@ class VerificationService:
         self.ai_provider = get_ai_provider()
         self.audit_service = AuditService(db)
         self.notif_service = NotificationService(db)
+        self.reward_service = RewardService(db)
 
     def initiate_verification(self, match_id: str, claimant: User) -> VerificationCase:
         match = self.match_repo.get_by_id(match_id)
@@ -164,12 +166,23 @@ class VerificationService:
                 found_rep.status = ReportStatus.HANDOVER_PENDING.value
                 self.report_repo.update(found_rep)
 
+            # Award finder Good Samaritan reward points
+            if case.finder_id:
+                try:
+                    self.reward_service.award_recovery_points(
+                        finder_id=case.finder_id,
+                        case_id=case.id,
+                        item_title=lost_rep.title if lost_rep else "Found Item"
+                    )
+                except Exception as e:
+                    pass
+
             # Notify finder and claimant
             if case.finder_id:
                 self.notif_service.send_notification(
                     user_id=case.finder_id,
-                    title="Ownership Verified for Found Item!",
-                    body="The claimant provided the correct verification details. Please schedule handover.",
+                    title="Ownership Verified & +75 Points Awarded!",
+                    body="The claimant provided the correct verification details. You earned +75 Good Samaritan points!",
                     notif_type=NotificationType.VERIFICATION.value,
                     related_case_id=case.id,
                     link_url=f"/student/recovery/{case.id}"

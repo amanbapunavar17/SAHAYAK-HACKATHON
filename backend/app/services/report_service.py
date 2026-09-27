@@ -8,12 +8,14 @@ from sqlalchemy.orm import Session
 from app.db.models.report import ItemReport, ReportType, ReportStatus
 from app.db.models.image import ItemImage, ImageSource
 from app.db.models.user import User
+from app.db.models.verification import VerificationCase
 from app.integrations.embedding import get_embedding_provider
 from app.repositories.reports import ReportRepository
 from app.repositories.locations import LocationRepository
 from app.schemas.reports import ReportCreate, ReportUpdate, StatusTransitionRequest
 from app.services.audit_service import AuditService
 from app.services.matching_service import MatchingService
+from app.services.reward_service import RewardService
 from app.utils.state_machine import validate_status_transition
 
 
@@ -24,6 +26,7 @@ class ReportService:
         self.loc_repo = LocationRepository(db)
         self.audit_service = AuditService(db)
         self.matching_service = MatchingService(db)
+        self.reward_service = RewardService(db)
         self.embedding_provider = get_embedding_provider()
 
     def get_reports(
@@ -162,6 +165,29 @@ class ReportService:
         old_status = report.status
         report.status = new_status
         updated = self.repo.update(report)
+
+        # Award finder Good Samaritan points if item is resolved/returned
+        if new_status.upper() in [ReportStatus.RETURNED.value, ReportStatus.SAFELY_RETURNED.value, "RESOLVED"]:
+            finder_id = None
+            case_id = report.id
+            if report.report_type.upper() == ReportType.LOST.value:
+                # Check associated verification case
+                case = self.db.query(VerificationCase).filter(VerificationCase.lost_report_id == report.id).first()
+                if case and case.finder_id:
+                    finder_id = case.finder_id
+                    case_id = case.id
+            elif report.report_type.upper() == ReportType.FOUND.value:
+                finder_id = report.reporter_id
+
+            if finder_id:
+                try:
+                    self.reward_service.award_recovery_points(
+                        finder_id=finder_id,
+                        case_id=case_id,
+                        item_title=report.title
+                    )
+                except Exception as e:
+                    pass
 
         self.audit_service.log(
             event_type="STATUS_TRANSITION",

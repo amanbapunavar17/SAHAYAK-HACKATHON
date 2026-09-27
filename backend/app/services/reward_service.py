@@ -77,21 +77,30 @@ class RewardService:
         return self.repo.get_user_milestones(user_id)
 
     def get_leaderboard(self, current_user_id: Optional[str] = None) -> List[Dict]:
-        top_profiles = self.user_repo.get_top_students(limit=25)
+        top_profiles = self.user_repo.get_top_students(limit=50)
         leaderboard = []
 
         for rank, p in enumerate(top_profiles, start=1):
             user = p.user
+            dept = p.branch or "Computer Science & Engineering"
+            name = user.full_name if user else "Student"
+            avatar = user.avatar_url if user and user.avatar_url else f"https://api.dicebear.com/7.x/avataaars/svg?seed={p.usn or name}"
+
             leaderboard.append({
                 "rank": rank,
                 "studentId": p.user_id,
-                "studentName": user.full_name if user else "Student",
+                "studentName": name,
+                "name": name,
+                "fullName": name,
                 "usn": p.usn,
                 "points": p.points_balance,
+                "recoveredCount": p.recovered_count,
                 "recoveriesCount": p.recovered_count,
                 "streakDays": p.streak_days,
-                "department": p.branch,
-                "avatar": user.avatar_url if user else None,
+                "department": dept,
+                "branch": dept,
+                "avatar": avatar,
+                "badgeLevel": p.badge_level,
                 "isCurrentUser": (p.user_id == current_user_id) if current_user_id else False
             })
 
