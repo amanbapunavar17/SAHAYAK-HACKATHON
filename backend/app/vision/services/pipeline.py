@@ -8,6 +8,7 @@ from app.vision.schemas.features import ProcessedItem, ImageProcessingResponse
 from app.vision.services.detector import ObjectDetector
 from app.vision.services.embedder import VisualEmbedder
 from app.vision.services.visual_features import VisualFeatureExtractor
+from app.vision.services.captioner import ImageCaptioner
 from app.vision.utils.image_processing import decode_image_bytes, safe_crop, pil_from_cv2
 
 logger = logging.getLogger("sahayak.vision.pipeline")
@@ -50,11 +51,21 @@ class VisionPipeline:
             # 5. Extract OpenCLIP semantic embedding
             embedding = self.embedder.embed_image(crop_pil)
 
+            # 6. Generate semantic physical description & color distribution
+            description, colors = ImageCaptioner.generate_description(
+                raw_class=det.raw_class_name,
+                category=det.category,
+                cv2_img=crop_cv2,
+                confidence=det.confidence
+            )
+
             items.append(ProcessedItem(
                 detection=det,
                 hashes=hashes,
                 orb=orb_feats,
-                embedding=embedding
+                embedding=embedding,
+                description=description,
+                color_distribution=colors
             ))
 
         return ImageProcessingResponse(

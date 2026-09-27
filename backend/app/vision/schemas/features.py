@@ -25,6 +25,8 @@ class ProcessedItem(BaseModel):
     hashes: ImageHashes
     orb: ORBFeatures
     embedding: VisualEmbedding
+    description: Optional[str] = Field(None, description="Auto-generated semantic description of the detected object")
+    color_distribution: Optional[Dict[str, float]] = Field(None, description="Dominant detected colors and their distribution")
 
 
 class ImageProcessingResponse(BaseModel):

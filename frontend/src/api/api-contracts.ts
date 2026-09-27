@@ -37,6 +37,8 @@ export interface ProcessedItem {
   hashes: ImageHashes;
   orb: ORBFeatures;
   embedding: VisualEmbedding;
+  description?: string;
+  color_distribution?: Record<string, number>;
 }
 
 export interface ImageProcessingResponse {
@@ -50,16 +52,21 @@ export interface ImageProcessingResponse {
 
 export interface MatchSignals {
   clip_similarity: number;
+  description_similarity?: number;
   hash_similarity: number;
   orb_inliers_score: number;
   category_match: number;
+  class_penalty?: number;
   overall_confidence: number;
 }
 
 export interface ComparisonResult {
   match: boolean;
   confidence: number;
-  verdict: 'MATCH' | 'POSSIBLE_MATCH' | 'NO_MATCH';
+  verdict: 'MATCH' | 'POSSIBLE_MATCH' | 'NO_MATCH' | 'CLASS_MISMATCH_PENALTY';
+  description_a?: string;
+  description_b?: string;
+  class_compatible?: boolean;
   signals: MatchSignals;
   reasons: string[];
 }

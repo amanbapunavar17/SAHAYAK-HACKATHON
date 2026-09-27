@@ -635,12 +635,17 @@ export const AIVisionLabPage: React.FC = () => {
                     Neural Fusion Decision
                   </span>
                   <h3 className="font-heading font-extrabold text-xl text-sahayak-blue-deep flex items-center gap-2">
-                    {compareResult.is_match ? (
+                    {compareResult.verdict === 'CLASS_MISMATCH_PENALTY' || compareResult.class_compatible === false ? (
+                      <>
+                        <AlertCircle className="w-6 h-6 text-red-500" />
+                        <span className="text-red-500">Incompatible Class Rejection (Negative Penalty Applied)</span>
+                      </>
+                    ) : compareResult.match || compareResult.verdict === 'MATCH' ? (
                       <>
                         <CheckCircle2 className="w-6 h-6 text-sahayak-success" />
                         <span>Valid AI Match Confirmed</span>
                       </>
-                    ) : compareResult.is_possible_match ? (
+                    ) : compareResult.verdict === 'POSSIBLE_MATCH' ? (
                       <>
                         <HelpCircle className="w-6 h-6 text-amber-500" />
                         <span>Possible Match (Under Proctor Review)</span>
@@ -648,7 +653,7 @@ export const AIVisionLabPage: React.FC = () => {
                     ) : (
                       <>
                         <AlertCircle className="w-6 h-6 text-sahayak-error" />
-                        <span>Negative Match (Hard Incompatibility Rejection)</span>
+                        <span>Negative Match (Visual Divergence)</span>
                       </>
                     )}
                   </h3>
@@ -657,16 +662,65 @@ export const AIVisionLabPage: React.FC = () => {
                 {/* Big Match Score Pill */}
                 <div className="flex items-center gap-3 bg-sahayak-cream p-3 rounded-2xl border border-sahayak-brown/15 shadow-neumorph-sm">
                   <div className="text-right">
-                    <span className="text-[10px] font-bold text-sahayak-text-muted uppercase block">Final AI Score</span>
-                    <span className="text-xs font-semibold text-sahayak-text-secondary">Weighted Fusion</span>
+                    <span className="text-[10px] font-bold text-sahayak-text-muted uppercase block">AI Match Score</span>
+                    <span className="text-xs font-semibold text-sahayak-text-secondary">
+                      {compareResult.confidence < 0 ? 'Negative Score' : 'Weighted Fusion'}
+                    </span>
                   </div>
                   <div className={`px-4 py-2 rounded-xl font-heading font-black text-2xl text-white ${
-                    compareResult.overall_similarity >= 0.65 ? 'bg-sahayak-success' : compareResult.overall_similarity >= 0.40 ? 'bg-amber-500' : 'bg-sahayak-error'
+                    compareResult.confidence < 0 || compareResult.verdict === 'CLASS_MISMATCH_PENALTY'
+                      ? 'bg-red-600 shadow-md shadow-red-600/30'
+                      : compareResult.confidence >= 0.65
+                      ? 'bg-sahayak-success shadow-md shadow-emerald-500/30'
+                      : compareResult.confidence >= 0.40
+                      ? 'bg-amber-500'
+                      : 'bg-sahayak-error'
                   }`}>
-                    {(compareResult.overall_similarity * 100).toFixed(1)}%
+                    {compareResult.confidence < 0 ? '-1.0 (Penalized)' : `${((compareResult.confidence || 0) * 100).toFixed(1)}%`}
                   </div>
                 </div>
               </div>
+
+              {/* Auto-Generated AI Semantic Image Descriptions */}
+              {(compareResult.description_a || compareResult.description_b) && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-sahayak-blue-deep uppercase tracking-wider flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-sahayak-gold" />
+                      <span>Auto-Generated AI Semantic Descriptions (Vision-to-Text)</span>
+                    </h4>
+                    {compareResult.signals?.description_similarity !== undefined && (
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                        compareResult.class_compatible === false
+                          ? 'bg-red-100 text-red-600 border border-red-200'
+                          : 'bg-cyan-100 text-cyan-700 border border-cyan-200'
+                      }`}>
+                        Description Similarity: {((compareResult.signals.description_similarity || 0) * 100).toFixed(0)}%
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="p-3.5 rounded-2xl bg-sahayak-cream-soft border border-sahayak-brown/15 space-y-1">
+                      <span className="text-[10px] font-bold text-red-500 uppercase tracking-wider block">
+                        🔴 Item A Description:
+                      </span>
+                      <p className="text-xs font-medium text-sahayak-text-primary italic">
+                        "{compareResult.description_a || 'Item A physical representation'}"
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-sahayak-cream-soft border border-sahayak-brown/15 space-y-1">
+                      <span className="text-[10px] font-bold text-blue-500 uppercase tracking-wider block">
+                        🔵 Item B Description:
+                      </span>
+                      <p className="text-xs font-medium text-sahayak-text-primary italic">
+                        "{compareResult.description_b || 'Item B physical representation'}"
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Multi-Signal Breakdown Gauges */}
               <div className="space-y-3">
@@ -689,75 +743,86 @@ export const AIVisionLabPage: React.FC = () => {
                         style={{ width: `${Math.max(5, (compareResult.signals?.clip_similarity || 0) * 100)}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-sahayak-text-muted block">Weight: 40% in Fusion</span>
+                    <span className="text-[10px] text-sahayak-text-muted block">Weight: 35% in Fusion</span>
                   </div>
 
-                  {/* Signal 2: Category Match */}
+                  {/* Signal 2: Description Similarity */}
                   <div className="p-3.5 rounded-2xl bg-sahayak-cream border border-sahayak-brown/10 space-y-1.5">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-sahayak-text-primary">Category Cluster</span>
-                      <span className="font-mono font-bold text-sahayak-blue">
-                        {((compareResult.signals?.category_match_score || 0) * 100).toFixed(0)}%
+                      <span className="font-bold text-sahayak-text-primary">Description Overlap</span>
+                      <span className="font-mono font-bold text-cyan-600">
+                        {((compareResult.signals?.description_similarity || 0) * 100).toFixed(0)}%
                       </span>
                     </div>
                     <div className="w-full bg-sahayak-cream-soft h-2 rounded-full overflow-hidden">
                       <div
-                        className="bg-sahayak-gold h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(5, (compareResult.signals?.category_match_score || 0) * 100)}%` }}
+                        className="bg-cyan-500 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(5, (compareResult.signals?.description_similarity || 0) * 100)}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-sahayak-text-muted block">Weight: 20% in Fusion</span>
+                    <span className="text-[10px] text-sahayak-text-muted block">Weight: 25% in Fusion</span>
                   </div>
 
                   {/* Signal 3: ORB Inliers */}
                   <div className="p-3.5 rounded-2xl bg-sahayak-cream border border-sahayak-brown/10 space-y-1.5">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-sahayak-text-primary">ORB Keypoint Inliers</span>
+                      <span className="font-bold text-sahayak-text-primary">ORB Keypoints</span>
                       <span className="font-mono font-bold text-sahayak-blue">
-                        {compareResult.signals?.orb_inliers || 0} Inliers
+                        {((compareResult.signals?.orb_inliers_score || 0) * 100).toFixed(0)}%
                       </span>
                     </div>
                     <div className="w-full bg-sahayak-cream-soft h-2 rounded-full overflow-hidden">
                       <div
                         className="bg-sahayak-success h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (compareResult.signals?.orb_inliers || 0) * 8)}%` }}
+                        style={{ width: `${Math.max(5, (compareResult.signals?.orb_inliers_score || 0) * 100)}%` }}
                       />
                     </div>
-                    <span className="text-[10px] text-sahayak-text-muted block">Weight: 20% in Fusion</span>
+                    <span className="text-[10px] text-sahayak-text-muted block">Weight: 15% in Fusion</span>
                   </div>
 
-                  {/* Signal 4: Visual Hash Distance */}
+                  {/* Signal 4: Visual Hash Distance & Class Penalty */}
                   <div className="p-3.5 rounded-2xl bg-sahayak-cream border border-sahayak-brown/10 space-y-1.5">
                     <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-sahayak-text-primary">Hash Proximity</span>
-                      <span className="font-mono font-bold text-sahayak-blue">
-                        {((compareResult.signals?.hash_similarity || 0) * 100).toFixed(1)}%
+                      <span className="font-bold text-sahayak-text-primary">Class Compatibility</span>
+                      <span className={`font-mono font-bold ${compareResult.class_compatible === false ? 'text-red-600' : 'text-emerald-600'}`}>
+                        {compareResult.class_compatible === false ? '-1.0 (Penalty)' : '+1.0 (Valid)'}
                       </span>
                     </div>
                     <div className="w-full bg-sahayak-cream-soft h-2 rounded-full overflow-hidden">
                       <div
-                        className="bg-purple-500 h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.max(5, (compareResult.signals?.hash_similarity || 0) * 100)}%` }}
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          compareResult.class_compatible === false ? 'bg-red-500' : 'bg-emerald-500'
+                        }`}
+                        style={{ width: compareResult.class_compatible === false ? '100%' : '100%' }}
                       />
                     </div>
-                    <span className="text-[10px] text-sahayak-text-muted block">Weight: 20% in Fusion</span>
+                    <span className="text-[10px] text-sahayak-text-muted block">
+                      {compareResult.class_compatible === false ? 'Different Class &rarr; Hard Rejection' : 'Same Category Cluster'}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Explainable AI Decision Log */}
+              {/* Explainable AI Decision Log & Reasons */}
               <div className="p-4 rounded-2xl bg-sahayak-cream-soft border border-sahayak-brown/15 space-y-2">
                 <span className="text-xs font-bold text-sahayak-blue-deep flex items-center gap-1.5">
                   <FileCheck className="w-4 h-4 text-sahayak-blue" />
                   <span>Explainable Neural Decision Matrix (XAI)</span>
                 </span>
-                <p className="text-xs text-sahayak-text-secondary leading-relaxed">
-                  {compareResult.reasoning || (
-                    compareResult.overall_similarity >= 0.65
-                      ? 'The AI vision pipeline detected matching physical object boundaries and strong semantic alignment in the OpenCLIP 512-D embedding space, confirming item compatibility above the 65% match threshold.'
-                      : 'The AI vision pipeline detected hard category cluster conflict or significant visual divergence, safely preventing false claim pairing.'
-                  )}
-                </p>
+                {compareResult.reasons && compareResult.reasons.length > 0 ? (
+                  <ul className="space-y-1">
+                    {compareResult.reasons.map((r: string, idx: number) => (
+                      <li key={idx} className="text-xs text-sahayak-text-secondary flex items-start gap-1.5">
+                        <span className="text-sahayak-blue font-bold">&bull;</span>
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-xs text-sahayak-text-secondary leading-relaxed">
+                    Visual similarity analysis completed.
+                  </p>
+                )}
               </div>
             </NeumorphicCard>
           )}
