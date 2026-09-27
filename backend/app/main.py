@@ -67,7 +67,7 @@ except Exception as e:
 
 try:
     from app.db.session import engine, Base
-    import app.db.models
+    from app.db import models
     Base.metadata.create_all(bind=engine)
 except Exception as e:
     pass

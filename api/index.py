@@ -1,15 +1,18 @@
 import sys
 import os
 
-# Ensure backend modules can be resolved by Python lambda
 root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 backend_dir = os.path.join(root_dir, "backend")
 
-for p in [root_dir, backend_dir]:
+for p in [backend_dir, root_dir]:
     if p and p not in sys.path:
         sys.path.insert(0, p)
 
-from backend.app.main import app
+try:
+    from backend.app.main import app
+except ImportError:
+    from app.main import app
+
 
 
 
