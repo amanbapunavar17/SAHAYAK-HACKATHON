@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { CampusLocation, ItemReport } from '../../types';
-import { mockCampusLocations, mockReports } from '../../lib/mockData';
+import { api } from '../../lib/api';
 import { MapPin, Layers, Flame, Navigation, Building2, Filter } from 'lucide-react';
 import { NeumorphicCard } from '../ui/NeumorphicCard';
 
@@ -20,9 +20,24 @@ export const CampusMap: React.FC<CampusMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
 
+  const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [activeZoneFilter, setActiveZoneFilter] = useState<string>('ALL');
   const [isHeatmapMode, setIsHeatmapMode] = useState<boolean>(initialHeatmap);
   const [selectedBuilding, setSelectedBuilding] = useState<CampusLocation | null>(null);
+
+  useEffect(() => {
+    async function loadLocs() {
+      try {
+        const data = await api.locations.list();
+        if (Array.isArray(data) && data.length > 0) {
+          setLocations(data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch live locations:', err);
+      }
+    }
+    loadLocs();
+  }, []);
 
   // NIE North Campus Boundary
   const campusBoundaryCoords: [number, number][] = [
@@ -106,7 +121,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     const markersGroup = markersGroupRef.current;
     markersGroup.clearLayers();
 
-    const filtered = mockCampusLocations.filter(loc => {
+    const filtered = locations.filter(loc => {
       if (activeZoneFilter === 'ALL') return true;
       return loc.zone === activeZoneFilter;
     });
@@ -189,7 +204,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
         markersGroup.addLayer(circle);
       });
     }
-  }, [activeZoneFilter, isHeatmapMode, selectedLocation, selectedBuilding]);
+  }, [activeZoneFilter, isHeatmapMode, selectedLocation, selectedBuilding, locations]);
 
   return (
     <div className="relative w-full h-[520px] rounded-2xl overflow-hidden neu-card p-0 border border-cream-warm shadow-neu-card">

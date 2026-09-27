@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../lib/authContext';
-import { initialMessages, mockItemReports } from '../../lib/mockData';
+import { api } from '../../lib/api';
 import { Message } from '../../types';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { 
@@ -11,32 +11,95 @@ import {
   User, 
   CheckCheck,
   Building,
-  Info
+  Info,
+  Loader2,
+  FolderOpen
 } from 'lucide-react';
 
 export const MessagesPage: React.FC = () => {
-  const { studentUser } = useAuth();
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const { studentUser, user } = useAuth();
+  const currentUser = studentUser || user;
+  const [cases, setCases] = useState<any[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
-  const [activeCaseId, setActiveCaseId] = useState('c-101');
+  const [activeCaseId, setActiveCaseId] = useState<string>('');
+  const [loadingCases, setLoadingCases] = useState<boolean>(true);
+  const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  // Load active verification / handover cases
+  useEffect(() => {
+    async function loadCases() {
+      try {
+        const caseList = await api.verification.listCases();
+        if (Array.isArray(caseList) && caseList.length > 0) {
+          setCases(caseList);
+          setActiveCaseId(caseList[0].id || caseList[0].case_id || '');
+        } else {
+          // If no formal verification case yet, use fallback active case identifier
+          setActiveCaseId('c-nie-general');
+        }
+      } catch (err) {
+        console.warn('Failed to load verification cases:', err);
+        setActiveCaseId('c-nie-general');
+      } finally {
+        setLoadingCases(false);
+      }
+    }
+    loadCases();
+  }, []);
+
+  // Load messages for selected case
+  useEffect(() => {
+    if (!activeCaseId) return;
+
+    async function loadMessages() {
+      setLoadingMessages(true);
+      try {
+        const data = await api.messages.getCaseMessages(activeCaseId);
+        if (Array.isArray(data)) {
+          setMessages(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load messages:', err);
+      } finally {
+        setLoadingMessages(false);
+      }
+    }
+    loadMessages();
+  }, [activeCaseId]);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || !activeCaseId) return;
 
-    const newMsg: Message = {
+    const content = inputMessage.trim();
+    setInputMessage('');
+
+    // Optimistic message
+    const tempMsg: Message = {
       id: `msg-${Date.now()}`,
       caseId: activeCaseId,
-      senderId: studentUser?.id || 'std-1',
-      senderName: studentUser?.fullName || 'Rahul Sharma',
+      senderId: currentUser?.id || 'std-1',
+      senderName: currentUser?.fullName || currentUser?.name || 'Student',
       senderRole: 'CLAIMANT',
-      content: inputMessage.trim(),
+      content,
       timestamp: new Date().toISOString().replace('T', ' ').slice(0, 16),
       read: true
     };
+    setMessages(prev => [...prev, tempMsg]);
 
-    setMessages(prev => [...prev, newMsg]);
-    setInputMessage('');
+    try {
+      const res = await api.messages.send(activeCaseId, content);
+      if (res) {
+        // Refresh with server record
+        const fresh = await api.messages.getCaseMessages(activeCaseId);
+        if (Array.isArray(fresh)) {
+          setMessages(fresh);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to persist message to backend:', err);
+    }
   };
 
   const caseMessages = messages.filter(m => m.caseId === activeCaseId);
@@ -63,52 +126,60 @@ export const MessagesPage: React.FC = () => {
         {/* Left Col: Case Threads */}
         <div className="space-y-3">
           <h3 className="font-heading font-bold text-xs uppercase tracking-wider text-sahayak-text-muted">
-            Active Handover Cases
+            Active Handover Cases ({cases.length})
           </h3>
 
-          <NeumorphicCard
-            className={`p-4 border transition-all cursor-pointer ${
-              activeCaseId === 'c-101'
-                ? 'border-sahayak-blue bg-sahayak-cream-soft shadow-neumorph-sm'
-                : 'border-sahayak-brown/10'
-            }`}
-            onClick={() => setActiveCaseId('c-101')}
-          >
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sahayak-blue-ice text-sahayak-blue">
-                  Case #c-101
-                </span>
-                <h4 className="font-heading font-bold text-sm text-sahayak-text-primary">
-                  Noise ColorFit Pro 4
-                </h4>
-                <p className="text-xs text-sahayak-text-muted">With: Main Security Desk & Finder</p>
+          {cases.length === 0 ? (
+            <NeumorphicCard
+              className={`p-4 border transition-all cursor-pointer ${
+                activeCaseId === 'c-nie-general'
+                  ? 'border-sahayak-blue bg-sahayak-cream-soft shadow-neumorph-sm'
+                  : 'border-sahayak-brown/10'
+              }`}
+              onClick={() => setActiveCaseId('c-nie-general')}
+            >
+              <div className="flex items-start justify-between">
+                <div className="space-y-1">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sahayak-blue-ice text-sahayak-blue">
+                    Case #NIE-GENERAL
+                  </span>
+                  <h4 className="font-heading font-bold text-sm text-sahayak-text-primary">
+                    Proctor Office Desk
+                  </h4>
+                  <p className="text-xs text-sahayak-text-muted">Direct Support & Inquiries</p>
+                </div>
+                <span className="text-[10px] text-sahayak-text-muted font-mono">Live</span>
               </div>
-              <span className="text-[10px] text-sahayak-text-muted font-mono">14:45</span>
-            </div>
-          </NeumorphicCard>
-
-          <NeumorphicCard
-            className={`p-4 border transition-all cursor-pointer ${
-              activeCaseId === 'c-102'
-                ? 'border-sahayak-blue bg-sahayak-cream-soft shadow-neumorph-sm'
-                : 'border-sahayak-brown/10 opacity-70'
-            }`}
-            onClick={() => setActiveCaseId('c-102')}
-          >
-            <div className="flex items-start justify-between">
-              <div className="space-y-1">
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sahayak-gold-soft text-sahayak-blue-deep">
-                  Case #c-102
-                </span>
-                <h4 className="font-heading font-bold text-sm text-sahayak-text-primary">
-                  Casio Scientific Calculator
-                </h4>
-                <p className="text-xs text-sahayak-text-muted">With: Central Library Desk</p>
-              </div>
-              <span className="text-[10px] text-sahayak-text-muted font-mono">Yesterday</span>
-            </div>
-          </NeumorphicCard>
+            </NeumorphicCard>
+          ) : (
+            cases.map((cs) => {
+              const cId = cs.id || cs.case_id;
+              const isSelected = activeCaseId === cId;
+              return (
+                <NeumorphicCard
+                  key={cId}
+                  className={`p-4 border transition-all cursor-pointer ${
+                    isSelected
+                      ? 'border-sahayak-blue bg-sahayak-cream-soft shadow-neumorph-sm'
+                      : 'border-sahayak-brown/10'
+                  }`}
+                  onClick={() => setActiveCaseId(cId)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sahayak-blue-ice text-sahayak-blue">
+                        Case #{cId.slice(0, 8)}
+                      </span>
+                      <h4 className="font-heading font-bold text-sm text-sahayak-text-primary">
+                        {cs.item_title || cs.itemTitle || `Case ${cId.slice(0, 6)}`}
+                      </h4>
+                      <p className="text-xs text-sahayak-text-muted">Status: {cs.status || 'Active'}</p>
+                    </div>
+                  </div>
+                </NeumorphicCard>
+              );
+            })
+          )}
         </div>
 
         {/* Right 2 Cols: Chat Window */}

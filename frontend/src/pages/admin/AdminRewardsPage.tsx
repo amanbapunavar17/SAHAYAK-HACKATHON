@@ -1,5 +1,5 @@
-import React from 'react';
-import { mockLeaderboard, mockRewardTransactions } from '../../lib/mockData';
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { 
   Award, 
@@ -8,10 +8,29 @@ import {
   TrendingUp, 
   FileText, 
   UserCheck,
-  ShieldCheck
+  ShieldCheck,
+  Loader2
 } from 'lucide-react';
 
 export const AdminRewardsPage: React.FC = () => {
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function loadRewards() {
+      try {
+        const data = await api.rewards.getTransactions();
+        if (Array.isArray(data)) {
+          setTransactions(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load rewards:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadRewards();
+  }, []);
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -57,17 +76,23 @@ export const AdminRewardsPage: React.FC = () => {
 
         <NeumorphicCard className="p-0 border border-sahayak-brown/15 overflow-hidden shadow-neumorph">
           <div className="divide-y divide-sahayak-brown/10 text-xs">
-            {mockRewardTransactions.map((t) => (
-              <div key={t.id} className="p-4 flex items-center justify-between hover:bg-sahayak-cream-soft/60 transition-colors">
-                <div>
-                  <p className="font-bold text-sahayak-text-primary">{t.reason}</p>
-                  <p className="text-[11px] text-sahayak-text-muted">Transaction #{t.id} • Case #{t.caseId || 'n/a'} • {t.date}</p>
-                </div>
-                <span className="font-mono font-bold text-sahayak-success">
-                  +{t.points} PTS
-                </span>
+            {transactions.length === 0 ? (
+              <div className="p-8 text-center text-sahayak-text-secondary text-xs">
+                No reward transactions recorded yet.
               </div>
-            ))}
+            ) : (
+              transactions.map((t) => (
+                <div key={t.id} className="p-4 flex items-center justify-between hover:bg-sahayak-cream-soft/60 transition-colors">
+                  <div>
+                    <p className="font-bold text-sahayak-text-primary">{t.reason}</p>
+                    <p className="text-[11px] text-sahayak-text-muted">Transaction #{t.id} • Case #{t.caseId || 'n/a'} • {t.date || t.timestamp}</p>
+                  </div>
+                  <span className="font-mono font-bold text-sahayak-success">
+                    +{t.points} PTS
+                  </span>
+                </div>
+              ))
+            )}
           </div>
         </NeumorphicCard>
       </div>

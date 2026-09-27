@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { CampusMap } from '../../components/maps/CampusMap';
-import { mockCampusLocations } from '../../lib/mockData';
+import { CampusLocation } from '../../types';
+import { api } from '../../lib/api';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { 
   MapPin, 
@@ -12,6 +13,22 @@ import {
 } from 'lucide-react';
 
 export const AdminLocationsPage: React.FC = () => {
+  const [locations, setLocations] = useState<CampusLocation[]>([]);
+
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const data = await api.locations.list();
+        if (Array.isArray(data)) {
+          setLocations(data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch admin locations:', err);
+      }
+    }
+    loadLocations();
+  }, []);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -38,7 +55,7 @@ export const AdminLocationsPage: React.FC = () => {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {mockCampusLocations.map((loc) => (
+          {locations.map((loc) => (
             <NeumorphicCard key={loc.id} className="p-4 border border-sahayak-brown/15 space-y-3">
               <div className="flex items-start justify-between">
                 <div className="p-2 rounded-xl bg-sahayak-blue-ice text-sahayak-blue">

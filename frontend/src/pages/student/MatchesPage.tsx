@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { matchingService } from '../../lib/services';
+import { api } from '../../lib/api';
 import { MatchItem } from '../../types';
 import { MatchCard } from '../../components/cards/MatchCard';
 import { LoadingState } from '../../components/feedback/LoadingState';
@@ -16,8 +17,12 @@ export const MatchesPage: React.FC = () => {
   useEffect(() => {
     async function fetchMatches() {
       try {
-        const data = await matchingService.getMatches();
-        setMatches(data);
+        const data = await api.matches.list();
+        if (Array.isArray(data)) {
+          setMatches(data);
+        }
+      } catch (err) {
+        console.warn('Live matches fetch error:', err);
       } finally {
         setLoading(false);
       }

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { mockLeaderboard } from '../../lib/mockData';
+import React, { useState, useEffect } from 'react';
+import { api } from '../../lib/api';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { 
   Trophy, 
@@ -8,15 +8,34 @@ import {
   Crown, 
   Medal, 
   CheckCircle2,
-  GraduationCap
+  GraduationCap,
+  Users
 } from 'lucide-react';
 
 export const LeaderboardPage: React.FC = () => {
   const [departmentFilter, setDepartmentFilter] = useState('ALL');
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadLeaderboard() {
+      try {
+        const data = await api.rewards.getLeaderboard();
+        if (data) {
+          setLeaderboard(data);
+        }
+      } catch (err) {
+        console.warn('Live leaderboard fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadLeaderboard();
+  }, []);
 
   const filteredLeaderboard = departmentFilter === 'ALL'
-    ? mockLeaderboard
-    : mockLeaderboard.filter(e => (e.department || '').includes(departmentFilter));
+    ? leaderboard
+    : leaderboard.filter(e => (e.department || '').includes(departmentFilter));
 
   return (
     <div className="space-y-6">
@@ -37,7 +56,7 @@ export const LeaderboardPage: React.FC = () => {
 
         {/* Filter */}
         <div className="flex items-center gap-2">
-          {['ALL', 'CSE', 'ISE', 'ECE', 'Mech'].map((d) => (
+          {['ALL', 'CSE', 'ISE', 'ECE', 'Mechanical'].map((d) => (
             <button
               key={d}
               onClick={() => setDepartmentFilter(d)}
@@ -54,123 +73,133 @@ export const LeaderboardPage: React.FC = () => {
       </div>
 
       {/* Top 3 Podium Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4">
-        {filteredLeaderboard.slice(0, 3).map((entry, idx) => {
-          const isGold = idx === 0;
-          const name = entry.studentName || entry.user?.fullName || entry.user?.name || 'Student';
-          const avatarImg = entry.avatar || entry.user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
-          const usnStr = entry.usn || entry.user?.usn || '4NI22CS142';
-          const count = entry.recoveredCount || entry.recoveriesCount || entry.user?.recoveredCount || 5;
-          const score = entry.points || entry.user?.finderPoints || 400;
+      {filteredLeaderboard.length === 0 ? (
+        <NeumorphicCard className="p-8 text-center border border-sahayak-brown/15 space-y-2">
+          <Users className="w-10 h-10 text-sahayak-blue mx-auto opacity-50" />
+          <h3 className="font-heading font-bold text-sm text-sahayak-blue-deep">Leaderboard Updating</h3>
+          <p className="text-xs text-sahayak-text-muted">No student rankings recorded for this department filter yet.</p>
+        </NeumorphicCard>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 pt-4">
+            {filteredLeaderboard.slice(0, 3).map((entry, idx) => {
+              const isGold = idx === 0;
+              const name = entry.studentName || entry.name || entry.fullName || 'Student';
+              const avatarImg = entry.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.usn || name}`;
+              const usnStr = entry.usn || '4NI21CS089';
+              const count = entry.recoveredCount || entry.recoveriesCount || 0;
+              const score = entry.points || 0;
 
-          return (
-            <NeumorphicCard
-              key={`podium-${entry.rank}-${usnStr}`}
-              className={`p-6 border text-center space-y-3 relative overflow-hidden ${
-                isGold
-                  ? 'border-sahayak-gold shadow-neumorph-lg bg-gradient-to-b from-sahayak-gold-soft/40 to-sahayak-cream-soft md:-translate-y-2'
-                  : 'border-sahayak-brown/15 shadow-neumorph'
-              }`}
-            >
-              {isGold && (
-                <div className="absolute top-3 right-3 text-sahayak-gold animate-bounce">
-                  <Crown className="w-6 h-6 fill-sahayak-gold" />
-                </div>
-              )}
+              return (
+                <NeumorphicCard
+                  key={`podium-${entry.rank}-${usnStr}`}
+                  className={`p-6 border text-center space-y-3 relative overflow-hidden ${
+                    isGold
+                      ? 'border-sahayak-gold shadow-neumorph-lg bg-gradient-to-b from-sahayak-gold-soft/40 to-sahayak-cream-soft md:-translate-y-2'
+                      : 'border-sahayak-brown/15 shadow-neumorph'
+                  }`}
+                >
+                  {isGold && (
+                    <div className="absolute top-3 right-3 text-sahayak-gold animate-bounce">
+                      <Crown className="w-6 h-6 fill-sahayak-gold" />
+                    </div>
+                  )}
 
-              <div className="w-16 h-16 rounded-full mx-auto p-1 bg-sahayak-cream border-2 border-sahayak-brown/20 shadow-neumorph-sm flex items-center justify-center">
-                <img
-                  src={avatarImg}
-                  alt={name}
-                  className="w-full h-full rounded-full object-cover"
-                />
-              </div>
+                  <div className="w-16 h-16 rounded-full mx-auto p-1 bg-sahayak-cream border-2 border-sahayak-brown/20 shadow-neumorph-sm flex items-center justify-center">
+                    <img
+                      src={avatarImg}
+                      alt={name}
+                      className="w-full h-full rounded-full object-cover"
+                    />
+                  </div>
 
-              <div>
-                <div className="inline-flex items-center gap-1 text-[11px] font-bold text-sahayak-blue">
-                  <span>Rank #{entry.rank}</span>
-                </div>
-                <h3 className="font-heading font-bold text-base text-sahayak-text-primary mt-0.5">
-                  {name}
-                </h3>
-                <p className="text-xs text-sahayak-text-muted font-mono">{usnStr} • {entry.department}</p>
-              </div>
+                  <div>
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-sahayak-blue">
+                      <span>Rank #{entry.rank || idx + 1}</span>
+                    </div>
+                    <h3 className="font-heading font-bold text-base text-sahayak-text-primary mt-0.5">
+                      {name}
+                    </h3>
+                    <p className="text-xs text-sahayak-text-muted font-mono">{usnStr} • {entry.department}</p>
+                  </div>
 
-              <div className="pt-2 border-t border-sahayak-brown/10 flex justify-around text-xs">
-                <div>
-                  <p className="font-bold text-sahayak-blue-deep">{count}</p>
-                  <p className="text-[10px] text-sahayak-text-muted">Recovered</p>
-                </div>
-                <div className="h-6 w-px bg-sahayak-brown/20" />
-                <div>
-                  <p className="font-bold text-sahayak-gold">{score} PTS</p>
-                  <p className="text-[10px] text-sahayak-text-muted">Total Score</p>
-                </div>
-              </div>
-            </NeumorphicCard>
-          );
-        })}
-      </div>
+                  <div className="pt-2 border-t border-sahayak-brown/10 flex justify-around text-xs">
+                    <div>
+                      <p className="font-bold text-sahayak-blue-deep">{count}</p>
+                      <p className="text-[10px] text-sahayak-text-muted">Recovered</p>
+                    </div>
+                    <div className="h-6 w-px bg-sahayak-brown/20" />
+                    <div>
+                      <p className="font-bold text-sahayak-gold">{score} PTS</p>
+                      <p className="text-[10px] text-sahayak-text-muted">Total Score</p>
+                    </div>
+                  </div>
+                </NeumorphicCard>
+              );
+            })}
+          </div>
 
-      {/* Full Leaderboard Table */}
-      <NeumorphicCard className="p-0 border border-sahayak-brown/15 overflow-hidden shadow-neumorph">
-        <div className="p-4 border-b border-sahayak-brown/10 bg-sahayak-cream">
-          <h3 className="font-heading font-bold text-sm text-sahayak-blue-deep">
-            Campus Leaderboard Table
-          </h3>
-        </div>
+          {/* Full Leaderboard Table */}
+          <NeumorphicCard className="p-0 border border-sahayak-brown/15 overflow-hidden shadow-neumorph">
+            <div className="p-4 border-b border-sahayak-brown/10 bg-sahayak-cream">
+              <h3 className="font-heading font-bold text-sm text-sahayak-blue-deep">
+                Campus Leaderboard Table ({filteredLeaderboard.length} Verified Champions)
+              </h3>
+            </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-sahayak-cream border-b border-sahayak-brown/10 text-sahayak-text-muted uppercase tracking-wider font-bold">
-              <tr>
-                <th className="p-3.5">Rank</th>
-                <th className="p-3.5">Student / USN</th>
-                <th className="p-3.5">Department</th>
-                <th className="p-3.5">Items Recovered</th>
-                <th className="p-3.5 text-right">Points</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-sahayak-brown/10">
-              {filteredLeaderboard.map((entry) => {
-                const name = entry.studentName || entry.user?.fullName || entry.user?.name || 'Student';
-                const avatarImg = entry.avatar || entry.user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
-                const usnStr = entry.usn || entry.user?.usn || '4NI22CS142';
-                const count = entry.recoveredCount || entry.recoveriesCount || entry.user?.recoveredCount || 5;
-                const score = entry.points || entry.user?.finderPoints || 400;
-
-                return (
-                  <tr key={`table-${entry.rank}-${usnStr}`} className="hover:bg-sahayak-cream-soft/50 transition-colors">
-                    <td className="p-3.5 font-bold text-sahayak-blue">
-                      #{entry.rank}
-                    </td>
-                    <td className="p-3.5 flex items-center gap-3">
-                      <img
-                        src={avatarImg}
-                        alt={name}
-                        className="w-8 h-8 rounded-full object-cover border border-sahayak-brown/15"
-                      />
-                      <div>
-                        <span className="font-bold text-sahayak-text-primary block">{name}</span>
-                        <span className="font-mono text-[11px] text-sahayak-text-muted">{usnStr}</span>
-                      </div>
-                    </td>
-                    <td className="p-3.5 text-sahayak-text-secondary">
-                      {entry.department}
-                    </td>
-                    <td className="p-3.5 font-bold text-sahayak-text-primary">
-                      {count} verified
-                    </td>
-                    <td className="p-3.5 text-right font-mono font-bold text-sahayak-gold">
-                      {score} PTS
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-sahayak-cream border-b border-sahayak-brown/10 text-sahayak-text-muted uppercase tracking-wider font-bold">
+                  <tr>
+                    <th className="p-3.5">Rank</th>
+                    <th className="p-3.5">Student / USN</th>
+                    <th className="p-3.5">Department</th>
+                    <th className="p-3.5">Items Recovered</th>
+                    <th className="p-3.5 text-right">Points</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </NeumorphicCard>
+                </thead>
+                <tbody className="divide-y divide-sahayak-brown/10">
+                  {filteredLeaderboard.map((entry, idx) => {
+                    const name = entry.studentName || entry.name || entry.fullName || 'Student';
+                    const avatarImg = entry.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.usn || name}`;
+                    const usnStr = entry.usn || '4NI21CS089';
+                    const count = entry.recoveredCount || entry.recoveriesCount || 0;
+                    const score = entry.points || 0;
+
+                    return (
+                      <tr key={`table-${entry.rank || idx}-${usnStr}`} className="hover:bg-sahayak-cream-soft/50 transition-colors">
+                        <td className="p-3.5 font-bold text-sahayak-blue">
+                          #{entry.rank || idx + 1}
+                        </td>
+                        <td className="p-3.5 flex items-center gap-3">
+                          <img
+                            src={avatarImg}
+                            alt={name}
+                            className="w-8 h-8 rounded-full object-cover border border-sahayak-brown/15"
+                          />
+                          <div>
+                            <span className="font-bold text-sahayak-text-primary block">{name}</span>
+                            <span className="font-mono text-[11px] text-sahayak-text-muted">{usnStr}</span>
+                          </div>
+                        </td>
+                        <td className="p-3.5 text-sahayak-text-secondary">
+                          {entry.department}
+                        </td>
+                        <td className="p-3.5 font-bold text-sahayak-text-primary">
+                          {count} verified
+                        </td>
+                        <td className="p-3.5 text-right font-mono font-bold text-sahayak-gold">
+                          {score} PTS
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </NeumorphicCard>
+        </>
+      )}
     </div>
   );
 };

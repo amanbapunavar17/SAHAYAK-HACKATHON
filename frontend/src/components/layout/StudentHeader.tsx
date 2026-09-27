@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
+import { api } from '../../lib/api';
 import { Bell, Search, Award, Bot, Menu, LogOut, PlusCircle, Sparkles } from 'lucide-react';
-import { mockNotifications } from '../../lib/mockData';
 
 interface StudentHeaderProps {
   onToggleSidebar?: () => void;
@@ -11,7 +11,21 @@ interface StudentHeaderProps {
 export const StudentHeader: React.FC<StudentHeaderProps> = ({ onToggleSidebar }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const unreadCount = mockNotifications.filter(n => !n.isRead).length;
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    async function loadNotifs() {
+      try {
+        const notifs = await api.notifications.list();
+        if (Array.isArray(notifs)) {
+          setUnreadCount(notifs.filter((n: any) => !n.isRead && !n.read).length);
+        }
+      } catch (err) {
+        // silent
+      }
+    }
+    loadNotifs();
+  }, []);
 
   return (
     <header className="sticky top-0 z-30 bg-cream/95 backdrop-blur-md border-b border-cream-warm h-16 sm:h-20 flex items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -60,7 +74,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ onToggleSidebar })
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gold-soft border border-gold/40 rounded-xl text-xs font-bold text-primary-dark shadow-sm hover:scale-105 transition-transform"
         >
           <Award className="w-4 h-4 text-gold-dark" />
-          <span>{user?.points ?? user?.finderPoints ?? 240} Pts</span>
+          <span>{user?.points ?? user?.finderPoints ?? 0} Pts</span>
         </Link>
 
         {/* AI Assistant Pill */}

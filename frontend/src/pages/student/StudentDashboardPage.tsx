@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
-import { reportsService, matchingService } from '../../lib/services';
+import { api } from '../../lib/api';
 import { ItemReport, MatchItem } from '../../types';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { StatCard } from '../../components/ui/StatCard';
 import { StatusBadge } from '../../components/ui/StatusBadge';
-import { SAHAYAKThread } from '../../components/ui/SAHAYAKThread';
 import { ReportCard } from '../../components/cards/ReportCard';
 import { MatchCard } from '../../components/cards/MatchCard';
 import { 
@@ -20,7 +19,8 @@ import {
   FileSearch,
   CheckCircle2,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  FolderOpen
 } from 'lucide-react';
 
 export const StudentDashboardPage: React.FC = () => {
@@ -30,18 +30,21 @@ export const StudentDashboardPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   const currentUser = studentUser || user;
-  const rawName = currentUser?.fullName || currentUser?.name || 'Zayan';
-  const firstName = rawName.split(' ')[0] || 'Zayan';
+  const fullName = currentUser?.fullName || currentUser?.name || 'Student';
+  const firstName = fullName.split(' ')[0] || 'Student';
 
   useEffect(() => {
     async function loadData() {
+      setLoading(true);
       try {
         const [rList, mList] = await Promise.all([
-          reportsService.getAll(),
-          matchingService.getMatches()
+          api.reports.list(),
+          api.matches.list()
         ]);
         setReports(rList || []);
         setMatches(mList || []);
+      } catch (err) {
+        console.warn('Live dashboard fetch error:', err);
       } finally {
         setLoading(false);
       }
@@ -51,6 +54,7 @@ export const StudentDashboardPage: React.FC = () => {
 
   const activeReports = (reports || []).filter(r => r.status !== 'RETURNED' && r.status !== 'SAFELY_RETURNED');
   const userMatches = (matches || []).slice(0, 3);
+  const highSignalMatches = (matches || []).filter(m => (m.similarityScore || 0) >= 80);
 
   return (
     <div className="space-y-8">
@@ -66,7 +70,7 @@ export const StudentDashboardPage: React.FC = () => {
               Welcome back, {firstName}!
             </h1>
             <p className="text-white/80 text-xs sm:text-sm">
-              Track your lost items, report discovered property on campus, and view verified AI match signals.
+              Logged in as <span className="font-bold text-sahayak-gold">{currentUser?.email}</span> ({currentUser?.usn || 'Institutional ID'}) • {currentUser?.department || currentUser?.branch || 'NIE Mysuru'}
             </p>
           </div>
 
@@ -88,7 +92,7 @@ export const StudentDashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Subtle Bottom SAHAYAK Thread Accent */}
+        {/* Subtle Bottom Accent */}
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-sahayak-gold via-sahayak-blue-sky to-white" />
       </div>
 
@@ -96,28 +100,28 @@ export const StudentDashboardPage: React.FC = () => {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Active Reports"
-          value={activeReports.length || 3}
+          value={activeReports.length}
           subtitle="Under Neural Radar"
           icon={FileSearch}
           color="blue"
         />
         <StatCard
           title="High-Signal Matches"
-          value={matches.filter(m => (m.similarityScore || 0) >= 80).length || 2}
+          value={highSignalMatches.length}
           subtitle="Ready for Verification"
           icon={Sparkles}
           color="gold"
         />
         <StatCard
           title="Finder Points"
-          value={currentUser?.finderPoints || currentUser?.points || 480}
-          subtitle="Gold Campus Hero Tier"
+          value={currentUser?.points ?? currentUser?.finderPoints ?? 0}
+          subtitle={currentUser?.badgeLevel || "Campus Member"}
           icon={Award}
           color="green"
         />
         <StatCard
-          title="Resolved Cases"
-          value="7"
+          title="Verified Recoveries"
+          value={currentUser?.recoveredCount ?? 0}
           subtitle="100% Handover Integrity"
           icon={ShieldCheck}
           color="blue"
@@ -142,11 +146,25 @@ export const StudentDashboardPage: React.FC = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {userMatches.map((match) => (
-            <MatchCard key={match.id} match={match} />
-          ))}
-        </div>
+        {matches.length === 0 ? (
+          <NeumorphicCard className="p-8 text-center border border-sahayak-brown/15 shadow-neumorph-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-sahayak-blue-ice text-sahayak-blue mx-auto flex items-center justify-center">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <h3 className="font-heading font-bold text-sm text-sahayak-blue-deep">
+              No High-Confidence Matches Detected Yet
+            </h3>
+            <p className="text-xs text-sahayak-text-secondary max-w-md mx-auto">
+              As soon as lost or found items are reported around NIE North campus, the neural matcher compares item attributes and visual signatures automatically.
+            </p>
+          </NeumorphicCard>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {userMatches.map((match) => (
+              <MatchCard key={match.id} match={match} />
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Recent Activity & Campus Recovery Map Banner */}
@@ -155,7 +173,7 @@ export const StudentDashboardPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-heading font-bold text-lg text-sahayak-blue-deep">
-              My Recent Campus Reports
+              Campus Reports Feed ({reports.length})
             </h2>
             <Link
               to="/student/reports"
@@ -165,11 +183,36 @@ export const StudentDashboardPage: React.FC = () => {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {reports.slice(0, 2).map((report) => (
-              <ReportCard key={report.id} report={report} />
-            ))}
-          </div>
+          {reports.length === 0 ? (
+            <NeumorphicCard className="p-8 text-center border border-sahayak-brown/15 space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-sahayak-cream-soft text-sahayak-text-muted mx-auto flex items-center justify-center">
+                <FolderOpen className="w-6 h-6" />
+              </div>
+              <p className="text-xs text-sahayak-text-secondary">
+                No reports submitted yet. Report lost or found property to begin tracking.
+              </p>
+              <div className="flex justify-center gap-3 pt-2">
+                <Link
+                  to="/student/report-lost"
+                  className="px-4 py-2 rounded-xl bg-sahayak-blue text-white text-xs font-bold shadow-neumorph hover:bg-sahayak-blue-mid"
+                >
+                  Report Lost
+                </Link>
+                <Link
+                  to="/student/report-found"
+                  className="px-4 py-2 rounded-xl bg-sahayak-cream border border-sahayak-brown/20 text-sahayak-blue-deep text-xs font-bold"
+                >
+                  Report Found
+                </Link>
+              </div>
+            </NeumorphicCard>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {reports.slice(0, 4).map((report) => (
+                <ReportCard key={report.id} report={report} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Col: Quick Campus Map & Help */}

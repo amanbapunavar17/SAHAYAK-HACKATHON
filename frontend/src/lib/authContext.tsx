@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, StudentProfile, AdminUser, UserRole } from '../types';
-import { mockCurrentUser, mockAdminUser } from './mockData';
 import { api, getAuthToken, setAuthToken, removeAuthToken } from './api';
 
 interface AuthContextType {

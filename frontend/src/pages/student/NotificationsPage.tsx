@@ -1,23 +1,51 @@
-import React, { useState } from 'react';
-import { initialNotifications } from '../../lib/mockData';
+import React, { useState, useEffect } from 'react';
 import { AppNotification } from '../../types';
+import { api } from '../../lib/api';
 import { NotificationCard } from '../../components/cards/NotificationCard';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { EmptyState } from '../../components/feedback/EmptyState';
-import { Bell, CheckCheck, Filter, Sparkles } from 'lucide-react';
+import { Bell, CheckCheck, Filter, Sparkles, Loader2 } from 'lucide-react';
 
 export const NotificationsPage: React.FC = () => {
-  const [notifications, setNotifications] = useState<AppNotification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [filter, setFilter] = useState<'ALL' | 'UNREAD'>('ALL');
+  const [loading, setLoading] = useState<boolean>(true);
 
-  const handleMarkAsRead = (id: string) => {
+  const fetchNotifications = async () => {
+    try {
+      const data = await api.notifications.list();
+      if (Array.isArray(data)) {
+        setNotifications(data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch notifications:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+  }, []);
+
+  const handleMarkAsRead = async (id: string) => {
     setNotifications(prev =>
       prev.map(n => n.id === id ? { ...n, read: true } : n)
     );
+    try {
+      await api.notifications.markRead(id);
+    } catch (err) {
+      console.warn('Failed to mark read:', err);
+    }
   };
 
-  const handleMarkAllAsRead = () => {
+  const handleMarkAllAsRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await api.notifications.markAllRead();
+    } catch (err) {
+      console.warn('Failed to mark all read:', err);
+    }
   };
 
   const filtered = notifications.filter(n => filter === 'ALL' || !n.read);

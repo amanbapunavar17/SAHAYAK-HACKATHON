@@ -1,5 +1,4 @@
 import { ItemReport, MatchItem, VerificationCase, AuditEvent, Message } from '../types';
-import { mockReports, mockMatches, mockVerificationCases, mockAuditEvents, mockMessages, mockItemReports } from './mockData';
 import { api } from './api';
 
 // Local storage keys
@@ -28,18 +27,18 @@ function setLocal<T>(key: string, data: T) {
 // Reports Service
 export const reportsService = {
   getReports: (): ItemReport[] => {
-    return getLocal<ItemReport[]>(REPORTS_KEY, mockItemReports || mockReports);
+    return getLocal<ItemReport[]>(REPORTS_KEY, []);
   },
 
   getAll: async (): Promise<ItemReport[]> => {
     try {
       const liveReports = await api.reports.list();
-      if (liveReports && liveReports.length > 0) {
+      if (liveReports && Array.isArray(liveReports)) {
         setLocal(REPORTS_KEY, liveReports);
         return liveReports;
       }
     } catch (err) {
-      console.warn('Could not fetch live reports, using cached reports:', err);
+      console.warn('Could not fetch live reports from backend:', err);
     }
     return reportsService.getReports();
   },
@@ -177,34 +176,56 @@ export const reportsService = {
 // Multi-Signal Matching Service
 export const matchingService = {
   getMatches: (): MatchItem[] => {
-    return getLocal<MatchItem[]>(MATCHES_KEY, mockMatches);
+    return getLocal<MatchItem[]>(MATCHES_KEY, []);
   },
 
-  getMatchById: (id: string): MatchItem => {
+  getAll: async (): Promise<MatchItem[]> => {
+    try {
+      const data = await api.matches.list();
+      if (Array.isArray(data)) {
+        setLocal(MATCHES_KEY, data);
+        return data;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live matches:', err);
+    }
+    return matchingService.getMatches();
+  },
+
+  getMatchById: (id: string): MatchItem | undefined => {
     const matches = matchingService.getMatches();
     const found = matches.find(m => 
       m.id === id || 
       m.id.toLowerCase() === id.toLowerCase() ||
       m.id.includes(id) ||
       id.includes(m.id) ||
-      m.lostReport.id === id ||
-      m.foundReport.id === id
+      m.lostReport?.id === id ||
+      m.foundReport?.id === id
     );
-    return found || matches[0];
+    return found;
   }
 };
 
 // Verification & Case Service
 export const verificationService = {
   getCases: (): VerificationCase[] => {
-    return getLocal<VerificationCase[]>(CASES_KEY, mockVerificationCases);
+    return getLocal<VerificationCase[]>(CASES_KEY, []);
   },
 
-  getAllCases: (): VerificationCase[] => {
+  getAllCases: async (): Promise<VerificationCase[]> => {
+    try {
+      const data = await api.verification.listCases();
+      if (Array.isArray(data)) {
+        setLocal(CASES_KEY, data);
+        return data;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live cases:', err);
+    }
     return verificationService.getCases();
   },
 
-  getCaseById: (id: string): VerificationCase => {
+  getCaseById: (id: string): VerificationCase | undefined => {
     const cases = verificationService.getCases();
     const found = cases.find(c => 
       c.id === id || 
@@ -213,7 +234,7 @@ export const verificationService = {
       c.reportId === id ||
       c.id.includes(id)
     );
-    return found || cases[0];
+    return found;
   },
 
   submitVerification: (matchOrReportId: string, clues: string[]): VerificationCase => {
@@ -222,11 +243,11 @@ export const verificationService = {
       id: `c-${Date.now().toString().slice(-3)}`,
       matchId: matchOrReportId,
       reportId: matchOrReportId,
-      claimantName: 'Shaik Zayan Ahmed',
-      claimantUSN: '4NI22CS142',
-      answersSubmitted: clues.length > 0 ? clues : ['Bezel scratch & sticker mark on back'],
+      claimantName: 'Student Claimant',
+      claimantUSN: 'NIE-STUDENT',
+      answersSubmitted: clues.length > 0 ? clues : ['Confidential identifying marks submitted'],
       status: 'UNDER_REVIEW',
-      handoverLocation: 'NIE Main Security Desk Locker #3',
+      handoverLocation: 'NIE Main Security Desk Locker',
       createdAt: new Date().toISOString()
     };
 
@@ -235,7 +256,7 @@ export const verificationService = {
 
     auditService.logEvent({
       eventType: 'VERIFICATION_ATTEMPT',
-      actor: 'Shaik Zayan Ahmed (4NI22CS142)',
+      actor: 'Student Claimant',
       caseId: newCase.id,
       status: 'SUCCESS',
       description: `Claimant submitted confidential verification clues for case #${newCase.id}`
@@ -292,7 +313,7 @@ export const verificationService = {
 // Audit Service
 export const auditService = {
   getEvents: (): AuditEvent[] => {
-    return getLocal<AuditEvent[]>(AUDIT_KEY, mockAuditEvents);
+    return getLocal<AuditEvent[]>(AUDIT_KEY, []);
   },
 
   getRecentLogs: (): AuditEvent[] => {

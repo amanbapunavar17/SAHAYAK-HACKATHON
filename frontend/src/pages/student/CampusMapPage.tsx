@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CampusMap } from '../../components/maps/CampusMap';
-import { mockCampusLocations } from '../../lib/mockData';
+import { CampusLocation } from '../../types';
+import { api } from '../../lib/api';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { 
   MapPin, 
@@ -14,11 +15,26 @@ import {
 } from 'lucide-react';
 
 export const CampusMapPage: React.FC = () => {
+  const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
 
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const data = await api.locations.list();
+        if (Array.isArray(data)) {
+          setLocations(data);
+        }
+      } catch (err) {
+        console.warn('Failed to load campus locations:', err);
+      }
+    }
+    loadLocations();
+  }, []);
+
   const filteredLocations = selectedCategory === 'ALL'
-    ? mockCampusLocations
-    : mockCampusLocations.filter(loc => loc.zone === selectedCategory || (selectedCategory === 'KIOSKS' && loc.hasCollectionDesk));
+    ? locations
+    : locations.filter(loc => loc.zone === selectedCategory || (selectedCategory === 'KIOSKS' && loc.hasCollectionDesk));
 
   return (
     <div className="space-y-6">
@@ -65,7 +81,7 @@ export const CampusMapPage: React.FC = () => {
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {mockCampusLocations.map((loc) => (
+          {filteredLocations.map((loc) => (
             <NeumorphicCard key={loc.id} className="p-4 border border-sahayak-brown/15 space-y-2">
               <div className="flex items-start justify-between">
                 <div className="p-2 rounded-xl bg-sahayak-blue-ice text-sahayak-blue">

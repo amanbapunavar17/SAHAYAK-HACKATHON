@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
-import { mockRewardTransactions } from '../../lib/mockData';
+import { api } from '../../lib/api';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { CertificateModal } from '../../components/feedback/CertificateModal';
 import { 
@@ -14,14 +14,44 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
-  Star
+  Star,
+  Coins
 } from 'lucide-react';
 
 export const RewardsPage: React.FC = () => {
   const { studentUser } = useAuth();
   const [showCertificate, setShowCertificate] = useState(false);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [balance, setBalance] = useState<{ points: number; recoveredCount: number; badgeLevel: string }>({
+    points: studentUser?.points ?? studentUser?.finderPoints ?? 0,
+    recoveredCount: studentUser?.recoveredCount ?? 0,
+    badgeLevel: studentUser?.badgeLevel || 'Campus Guardian Lv. 1'
+  });
+  const [loading, setLoading] = useState(true);
 
-  const points = studentUser?.points || 120;
+  useEffect(() => {
+    async function loadRewards() {
+      try {
+        const [balData, txData] = await Promise.all([
+          api.rewards.getBalance(),
+          api.rewards.getTransactions()
+        ]);
+        if (balData) {
+          setBalance(balData);
+        }
+        if (txData) {
+          setTransactions(txData);
+        }
+      } catch (err) {
+        console.warn('Live rewards fetch notice:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadRewards();
+  }, []);
+
+  const points = balance.points ?? studentUser?.points ?? studentUser?.finderPoints ?? 0;
 
   return (
     <div className="space-y-8">
@@ -68,7 +98,7 @@ export const RewardsPage: React.FC = () => {
               </span>
             </div>
             <p className="text-xs text-sahayak-text-secondary max-w-md">
-              Tier: <strong className="text-sahayak-text-primary">Silver Guardian</strong> • 30 points until Gold Certificate milestone!
+              Badge: <strong className="text-sahayak-text-primary">{balance.badgeLevel || studentUser?.badgeLevel || 'Campus Member'}</strong> • {balance.recoveredCount || studentUser?.recoveredCount || 0} Verified Recoveries
             </p>
           </div>
 
@@ -166,33 +196,40 @@ export const RewardsPage: React.FC = () => {
         </h2>
 
         <NeumorphicCard className="p-0 border border-sahayak-brown/15 overflow-hidden shadow-neumorph">
-          <div className="divide-y divide-sahayak-brown/10">
-            {mockRewardTransactions.map((t) => (
-              <div key={t.id} className="p-4 flex items-center justify-between hover:bg-sahayak-cream-soft/50 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-sahayak-success-soft text-sahayak-success flex items-center justify-center font-bold text-xs">
-                    +{t.points}
+          {transactions.length === 0 ? (
+            <div className="p-8 text-center text-xs text-sahayak-text-muted space-y-2">
+              <Coins className="w-8 h-8 text-sahayak-gold mx-auto" />
+              <p>No transactions yet. Report found items or complete handovers to earn Good Samaritan points.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-sahayak-brown/10">
+              {transactions.map((t) => (
+                <div key={t.id} className="p-4 flex items-center justify-between hover:bg-sahayak-cream-soft/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-sahayak-success-soft text-sahayak-success flex items-center justify-center font-bold text-xs">
+                      +{t.points}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs sm:text-sm text-sahayak-text-primary">{t.reason}</h4>
+                      <p className="text-[11px] text-sahayak-text-muted">Case #{t.caseId || 'reg'} • {t.date}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-xs sm:text-sm text-sahayak-text-primary">{t.reason}</h4>
-                    <p className="text-[11px] text-sahayak-text-muted">Case #{t.caseId || 'reg'} • {t.date}</p>
-                  </div>
-                </div>
 
-                <span className="text-xs font-bold text-sahayak-success">
-                  +{t.points} PTS
-                </span>
-              </div>
-            ))}
-          </div>
+                  <span className="text-xs font-bold text-sahayak-success">
+                    +{t.points} PTS
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </NeumorphicCard>
       </div>
 
       <CertificateModal
         isOpen={showCertificate}
         onClose={() => setShowCertificate(false)}
-        recipientName={studentUser?.fullName || 'Rahul Sharma'}
-        itemTitle="Casio Scientific Calculator"
+        recipientName={studentUser?.fullName || studentUser?.name || 'Rahul Sharma'}
+        itemTitle="Verified Good Samaritan Recovery"
         date={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         pointsAwarded={points}
       />
