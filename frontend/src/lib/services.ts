@@ -70,7 +70,7 @@ export const reportsService = {
     let finalId = tempId;
     let finalImageUrl = reportData.images && reportData.images.length > 0 
       ? reportData.images[0].url 
-      : 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500';
+      : '';
 
     try {
       // 1. Create Report in FastAPI Backend DB
@@ -108,7 +108,7 @@ export const reportsService = {
         }
       }
     } catch (apiErr) {
-      console.warn('Backend report creation offline fallback:', apiErr);
+      console.warn('Backend report creation notice:', apiErr);
     }
 
     const newReport: ItemReport = {
@@ -121,18 +121,18 @@ export const reportsService = {
       currentLocation: reportData.currentLocation || 'NIE Main Security Desk Locker',
       incidentDate: reportData.incidentDate || new Date().toISOString().split('T')[0],
       incidentTime: reportData.incidentTime || '12:00',
-      images: [
+      images: finalImageUrl ? [
         {
           id: `img-${Date.now()}`,
           url: finalImageUrl,
           source: (reportData.images?.[0]?.source as any) || 'USER_UPLOADED',
           uploadedAt: new Date().toISOString()
         }
-      ],
+      ] : [],
       status: reportData.status || 'SUBMITTED',
-      reporterId: reportData.reporterId || 'std-1',
-      reporterName: reportData.reporterName || 'Rahul Sharma',
-      reporterUSN: reportData.reporterUSN || '4NI21CS089',
+      reporterId: reportData.reporterId || '',
+      reporterName: reportData.reporterName || 'Student',
+      reporterUSN: reportData.reporterUSN || '',
       brand: reportData.brand,
       color: reportData.color,
       distinguishingFeatures: reportData.distinguishingFeatures,

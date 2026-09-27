@@ -36,6 +36,7 @@ export const RegisterPage: React.FC = () => {
   });
 
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState<boolean>(false);
 
   const updateField = (field: string, val: any) => {
     setFormData(prev => ({ ...prev, [field]: val }));
@@ -51,19 +52,19 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
-  const handleNext = (e: React.FormEvent) => {
+  const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
     if (step === 'identity' || !step) {
-      if (!formData.fullName || !formData.email) {
-        setError('Please fill in your full name and NIE email.');
+      if (!formData.fullName.trim() || !formData.email.trim()) {
+        setError('Please fill in your full name and institutional email.');
         return;
       }
       navigate('/register/academic');
     } else if (step === 'academic') {
-      if (!formData.usn) {
-        setError('Please provide your NIE USN (e.g. 4NI21CS089).');
+      if (!formData.usn.trim()) {
+        setError('Please provide your official student USN.');
         return;
       }
       navigate('/register/security');
@@ -76,8 +77,15 @@ export const RegisterPage: React.FC = () => {
         setError('Passwords do not match.');
         return;
       }
-      registerStudent(formData);
-      navigate('/register/complete');
+      setLoading(true);
+      try {
+        await registerStudent(formData);
+        navigate('/register/complete');
+      } catch (err: any) {
+        setError(err.message || 'Registration failed. Please verify your details.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -316,10 +324,17 @@ export const RegisterPage: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2"
+                  disabled={loading}
+                  className="flex-1 py-3 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  <span>Complete Registration</span>
-                  <CheckCircle2 className="w-4 h-4 text-sahayak-gold" />
+                  {loading ? (
+                    <span>Creating Student Account in Database...</span>
+                  ) : (
+                    <>
+                      <span>Complete Registration</span>
+                      <CheckCircle2 className="w-4 h-4 text-sahayak-gold" />
+                    </>
+                  )}
                 </button>
               </div>
             </form>
@@ -335,7 +350,7 @@ export const RegisterPage: React.FC = () => {
                   Account Ready!
                 </h2>
                 <p className="text-xs text-sahayak-text-secondary max-w-sm mx-auto">
-                  Your student account for <span className="font-mono font-bold text-sahayak-blue">{formData.usn || '4NI21CS089'}</span> has been initialized. You have been awarded 50 Starter Finder Points!
+                  Your student account for <span className="font-mono font-bold text-sahayak-blue">{formData.fullName} ({formData.usn})</span> has been registered in the SAHAYAK database.
                 </p>
               </div>
 

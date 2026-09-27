@@ -184,9 +184,9 @@ export const ReportLostPage: React.FC = () => {
         brand,
         color,
         distinguishingFeatures,
-        reporterId: studentUser?.id || 'std-1',
-        reporterName: studentUser?.fullName || studentUser?.name || 'Rahul Sharma',
-        reporterUSN: studentUser?.usn || '4NI21CS089',
+        reporterId: studentUser?.id || '',
+        reporterName: studentUser?.fullName || studentUser?.name || 'Student',
+        reporterUSN: studentUser?.usn || '',
         isAnonymous: false
       }, imageFile);
 
