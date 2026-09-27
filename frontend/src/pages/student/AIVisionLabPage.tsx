@@ -68,12 +68,31 @@ export const AIVisionLabPage: React.FC = () => {
     init();
   }, []);
 
-  // Helper to convert an image URL to a File object
+  // Helper to convert an image URL to a File object with multiple resilient fallbacks
   const urlToFile = async (url: string, filename: string): Promise<File> => {
-    const fullUrl = url.startsWith('http') ? url : `http://localhost:8000${url.startsWith('/') ? '' : '/'}${url}`;
-    const res = await fetch(fullUrl);
-    const blob = await res.blob();
-    return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+    const cleanUrl = url.replace(/^\/+/, '');
+    const urlsToTry = [
+      url.startsWith('http') ? url : url,
+      url.startsWith('http') ? url : `/${cleanUrl}`,
+      url.startsWith('http') ? url : `/api/v1/${cleanUrl}`,
+      url.startsWith('http') ? url : `http://127.0.0.1:8000/${cleanUrl}`,
+      url.startsWith('http') ? url : `http://localhost:8000/${cleanUrl}`
+    ];
+    let lastErr = null;
+    for (const u of urlsToTry) {
+      try {
+        const res = await fetch(u);
+        if (res.ok) {
+          const blob = await res.blob();
+          if (blob.size > 50) {
+            return new File([blob], filename, { type: blob.type || 'image/jpeg' });
+          }
+        }
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw new Error(lastErr ? String(lastErr) : `Could not load image from ${url}`);
   };
 
   // 1. Single Image Processing Handler
@@ -103,7 +122,7 @@ export const AIVisionLabPage: React.FC = () => {
   const handleSelectDbReportSingle = async (report: ItemReport) => {
     if (!report.images || report.images.length === 0) return;
     const imgUrl = report.images[0].url;
-    setSingleImagePreview(imgUrl.startsWith('http') ? imgUrl : `http://localhost:8000${imgUrl}`);
+    setSingleImagePreview(imgUrl.startsWith('http') ? imgUrl : `http://localhost:8000${imgUrl.startsWith('/') ? '' : '/'}${imgUrl}`);
     setSingleResult(null);
     setSingleError(null);
     setSingleProcessing(true);
@@ -163,20 +182,22 @@ export const AIVisionLabPage: React.FC = () => {
       const waterBottles = dbReports.filter(r => (r.title + r.category).toLowerCase().includes('bottle') && r.images?.length);
       const earbuds = dbReports.filter(r => (r.title + r.category).toLowerCase().includes('earbud') && r.images?.length);
 
-      let itemA = waterBottles[0];
-      let itemB = type === 'matching_bottles' ? waterBottles[1] || waterBottles[0] : earbuds[0] || dbReports[0];
+      let itemA = waterBottles[0] || dbReports[0];
+      let itemB = type === 'matching_bottles' 
+        ? (waterBottles[1] || waterBottles[0] || dbReports[1] || dbReports[0])
+        : (earbuds[0] || dbReports[1] || dbReports[0]);
 
       if (!itemA || !itemB || !itemA.images?.[0] || !itemB.images?.[0]) {
-        throw new Error('Database does not have sufficient sample images for this preset. You can upload custom images above.');
+        throw new Error('Database does not have sufficient sample images for this preset. You can upload custom images below.');
       }
 
       const fileA = await urlToFile(itemA.images[0].url, 'item_a.jpg');
       const fileB = await urlToFile(itemB.images[0].url, 'item_b.jpg');
 
       setImageAFile(fileA);
-      setImageAPreview(itemA.images[0].url.startsWith('http') ? itemA.images[0].url : `http://localhost:8000${itemA.images[0].url}`);
+      setImageAPreview(itemA.images[0].url.startsWith('http') ? itemA.images[0].url : `http://localhost:8000${itemA.images[0].url.startsWith('/') ? '' : '/'}${itemA.images[0].url}`);
       setImageBFile(fileB);
-      setImageBPreview(itemB.images[0].url.startsWith('http') ? itemB.images[0].url : `http://localhost:8000${itemB.images[0].url}`);
+      setImageBPreview(itemB.images[0].url.startsWith('http') ? itemB.images[0].url : `http://localhost:8000${itemB.images[0].url.startsWith('/') ? '' : '/'}${itemB.images[0].url}`);
 
       const res = await visionApi.compareImages(fileA, fileB);
       setCompareResult(res);
@@ -283,7 +304,7 @@ export const AIVisionLabPage: React.FC = () => {
       {/* TAB 1: SINGLE IMAGE YOLO INSPECTOR */}
       {activeTab === 'single' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Upload & Live Preview */}
+          {/* Left Column: Upload & Live Preview with YOLO Overlay */}
           <div className="lg:col-span-6 space-y-4">
             <NeumorphicCard className="p-5 border border-sahayak-brown/15 space-y-4">
               <div className="flex items-center justify-between">
@@ -298,8 +319,8 @@ export const AIVisionLabPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Upload Dropzone */}
-              <label className="border-2 border-dashed border-sahayak-brown/25 hover:border-sahayak-blue rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer bg-sahayak-cream-soft/50 hover:bg-sahayak-cream-soft transition-all min-h-[220px]">
+              {/* Upload Dropzone with Live Visual Bounding Box Overlay */}
+              <label className="border-2 border-dashed border-sahayak-brown/25 hover:border-sahayak-blue rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer bg-sahayak-cream-soft/50 hover:bg-sahayak-cream-soft transition-all min-h-[220px]">
                 <input
                   type="file"
                   accept="image/*"
@@ -307,14 +328,33 @@ export const AIVisionLabPage: React.FC = () => {
                   className="hidden"
                 />
                 {singleImagePreview ? (
-                  <div className="relative max-h-56 w-full flex items-center justify-center overflow-hidden rounded-xl">
-                    <img
-                      src={singleImagePreview}
-                      alt="Preview"
-                      className="max-h-56 object-contain rounded-xl shadow-md"
-                    />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs font-bold rounded-xl backdrop-blur-xs">
-                      Click to choose another image
+                  <div className="relative max-h-72 w-full flex items-center justify-center overflow-hidden rounded-xl bg-black/5 p-2">
+                    <div className="relative inline-block">
+                      <img
+                        src={singleImagePreview}
+                        alt="Preview"
+                        className="max-h-64 max-w-full object-contain rounded-xl shadow-md block"
+                      />
+                      {/* Live YOLO Neural Bounding Box Overlay */}
+                      {singleResult?.items?.map((item: any, i: number) => {
+                        const bbox = item.detection?.bbox;
+                        if (!bbox) return null;
+                        const left = `${(bbox.xmin || 0) * 100}%`;
+                        const top = `${(bbox.ymin || 0) * 100}%`;
+                        const width = `${((bbox.xmax || 1) - (bbox.xmin || 0)) * 100}%`;
+                        const height = `${((bbox.ymax || 1) - (bbox.ymin || 0)) * 100}%`;
+                        return (
+                          <div
+                            key={i}
+                            className="absolute border-2 border-cyan-400 bg-cyan-400/20 rounded-md pointer-events-none shadow-lg shadow-cyan-400/40"
+                            style={{ left, top, width, height }}
+                          >
+                            <span className="absolute -top-6 left-0 bg-cyan-500 text-black text-[10px] font-black px-2 py-0.5 rounded shadow-md whitespace-nowrap">
+                              {item.detection.category || item.detection.raw_class_name || 'Object'} ({((item.detection.confidence || 0.85) * 100).toFixed(0)}%)
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (
@@ -375,7 +415,7 @@ export const AIVisionLabPage: React.FC = () => {
                       <div className="aspect-video w-full rounded-lg bg-sahayak-cream-soft overflow-hidden mb-1.5">
                         {report.images?.[0] ? (
                           <img
-                            src={report.images[0].url.startsWith('http') ? report.images[0].url : `http://localhost:8000${report.images[0].url}`}
+                            src={report.images[0].url.startsWith('http') ? report.images[0].url : `http://localhost:8000${report.images[0].url.startsWith('/') ? '' : '/'}${report.images[0].url}`}
                             alt={report.title}
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           />
@@ -404,7 +444,7 @@ export const AIVisionLabPage: React.FC = () => {
                 </h3>
                 {singleResult && (
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sahayak-success-soft text-sahayak-success">
-                    Processed in {singleResult.metadata?.processing_time_ms ? `${singleResult.metadata.processing_time_ms.toFixed(0)} ms` : 'Instant'}
+                    {singleResult.device ? `Device: ${singleResult.device}` : 'Active'}
                   </span>
                 )}
               </div>
@@ -432,7 +472,7 @@ export const AIVisionLabPage: React.FC = () => {
                             Primary Object Class
                           </span>
                           <h4 className="font-heading font-extrabold text-lg text-sahayak-blue-deep capitalize">
-                            {item.detection?.class_name || item.detection?.category || 'Detected Object'}
+                            {item.detection?.raw_class_name || item.detection?.category || 'Detected Object'}
                           </h4>
                           <span className="text-xs font-semibold text-sahayak-blue">
                             Campus Category: {item.detection?.category || 'General Item'}
@@ -448,29 +488,11 @@ export const AIVisionLabPage: React.FC = () => {
 
                       {/* Bounding Box Coordinates */}
                       {item.detection?.bbox && (
-                        <div className="p-2.5 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/10 text-[11px] font-mono text-sahayak-text-secondary flex justify-between">
-                          <span>Bounding Box (x1, y1, x2, y2):</span>
+                        <div className="p-2.5 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/10 text-[11px] font-mono text-sahayak-text-secondary flex justify-between items-center">
+                          <span>Normalized Bounding Box:</span>
                           <span className="font-bold text-sahayak-blue-deep">
-                            [{item.detection.bbox.map((v: number) => v.toFixed(0)).join(', ')}]
+                            [xmin: {item.detection.bbox.xmin?.toFixed(2)}, ymin: {item.detection.bbox.ymin?.toFixed(2)}, xmax: {item.detection.bbox.xmax?.toFixed(2)}, ymax: {item.detection.bbox.ymax?.toFixed(2)}]
                           </span>
-                        </div>
-                      )}
-
-                      {/* Dominant Colors */}
-                      {item.color_distribution && (
-                        <div className="space-y-1.5 pt-1">
-                          <span className="text-[10px] font-bold text-sahayak-text-muted uppercase tracking-wider block">
-                            Extracted Dominant Colors
-                          </span>
-                          <div className="flex flex-wrap items-center gap-2">
-                            {Object.entries(item.color_distribution).map(([colorName, ratio]: [string, any]) => (
-                              <div key={colorName} className="flex items-center gap-1 px-2 py-1 rounded-lg bg-sahayak-cream-soft border border-sahayak-brown/10 text-xs">
-                                <span className="w-3 h-3 rounded-full border border-black/10 shadow-xs" style={{ backgroundColor: colorName.toLowerCase() }} />
-                                <span className="capitalize font-semibold text-sahayak-text-primary">{colorName}</span>
-                                <span className="text-[10px] text-sahayak-text-muted">({(ratio * 100).toFixed(0)}%)</span>
-                              </div>
-                            ))}
-                          </div>
                         </div>
                       )}
 
@@ -478,15 +500,15 @@ export const AIVisionLabPage: React.FC = () => {
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-sahayak-brown/10 text-xs">
                         <div className="p-2 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/10">
                           <span className="text-[10px] font-bold text-sahayak-text-muted block">OpenCLIP Vector</span>
-                          <span className="font-mono text-xs font-bold text-sahayak-blue">512 Dimensions (L2)</span>
-                          <span className="text-[9px] text-sahayak-text-muted block mt-0.5">ViT-B-32 LAION-2B</span>
+                          <span className="font-mono text-xs font-bold text-sahayak-blue">{item.embedding?.dimension || 512} Dimensions (L2)</span>
+                          <span className="text-[9px] text-sahayak-text-muted block mt-0.5">{item.embedding?.model || 'ViT-B-32 LAION-2B'}</span>
                         </div>
                         <div className="p-2 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/10">
                           <span className="text-[10px] font-bold text-sahayak-text-muted block">Perceptual pHash</span>
                           <span className="font-mono text-xs font-bold text-sahayak-blue truncate block">
                             {item.hashes?.phash || '0x4f8b21...'}
                           </span>
-                          <span className="text-[9px] text-sahayak-text-muted block mt-0.5">DCT Frequency Hash</span>
+                          <span className="text-[9px] text-sahayak-text-muted block mt-0.5">Keypoints: {item.orb?.keypoint_count || 0} ORB</span>
                         </div>
                       </div>
                     </div>

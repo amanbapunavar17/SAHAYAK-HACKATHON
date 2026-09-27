@@ -30,6 +30,7 @@ app.add_middleware(
 uploads_dir = settings.STORAGE_LOCAL_DIR
 os.makedirs(uploads_dir, exist_ok=True)
 app.mount("/api/v1/uploads", StaticFiles(directory=uploads_dir), name="uploads")
+app.mount("/uploads", StaticFiles(directory=uploads_dir), name="uploads_root")
 
 # Include API v1 router
 app.include_router(api_router, prefix=settings.API_V1_PREFIX)
