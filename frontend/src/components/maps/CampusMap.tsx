@@ -68,15 +68,6 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     loadData();
   }, []);
 
-  // NIE North Campus Boundary Coords
-  const campusBoundaryCoords: [number, number][] = [
-    [12.3530, 76.6110],
-    [12.3568, 76.6112],
-    [12.3572, 76.6148],
-    [12.3532, 76.6152],
-    [12.3530, 76.6110]
-  ];
-
   // Helper to switch tile layers
   const updateTileLayer = (map: L.Map, style: MapTileStyle) => {
     if (tileLayerGroupRef.current) {
@@ -120,12 +111,13 @@ export const CampusMap: React.FC<CampusMapProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
+    // Default center from database NIE locations
     const centerLatLng: [number, number] = [12.3548, 76.6130];
 
     const map = L.map(mapContainerRef.current, {
       center: centerLatLng,
       zoom: 17,
-      minZoom: 14,
+      minZoom: 13,
       maxZoom: 20,
       zoomControl: false
     });
@@ -134,19 +126,6 @@ export const CampusMap: React.FC<CampusMapProps> = ({
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Boundary Polygon
-    const boundaryGroup = L.layerGroup().addTo(map);
-    const campusPolygon = L.polygon(campusBoundaryCoords, {
-      color: '#0375DE',
-      weight: 2,
-      dashArray: '5, 5',
-      fillColor: '#0375DE',
-      fillOpacity: 0.05
-    });
-    campusPolygon.bindTooltip('🏛️ NIE North Campus Perimeter', { sticky: true });
-    boundaryGroup.addLayer(campusPolygon);
-    boundaryGroupRef.current = boundaryGroup;
-
     const markersGroup = L.layerGroup().addTo(map);
     markersGroupRef.current = markersGroup;
     mapInstanceRef.current = map;
@@ -154,7 +133,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     // Trigger invalidateSize after initial render
     setTimeout(() => {
       map.invalidateSize();
-    }, 250);
+    }, 200);
 
     // Resize observer to keep map perfectly rendered
     const resizeObserver = new ResizeObserver(() => {
@@ -170,6 +149,16 @@ export const CampusMap: React.FC<CampusMapProps> = ({
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Fit bounds when database locations load
+  useEffect(() => {
+    if (!mapInstanceRef.current || locations.length === 0) return;
+    const latLngs = locations.map(loc => [loc.latitude, loc.longitude] as [number, number]);
+    if (latLngs.length > 0) {
+      const bounds = L.latLngBounds(latLngs);
+      mapInstanceRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+    }
+  }, [locations]);
 
   // 2. React to Tile Style Changes
   useEffect(() => {
