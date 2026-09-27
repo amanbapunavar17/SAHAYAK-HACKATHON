@@ -47,6 +47,15 @@ export const AdminReportsPage: React.FC = () => {
     return matchesType && matchesSearch;
   });
 
+  const handleQuickResolve = async (reportId: string) => {
+    try {
+      await reportsService.updateStatus(reportId, 'RETURNED');
+      setReports(prev => prev.map(r => r.id === reportId ? { ...r, status: 'RETURNED' } : r));
+    } catch (err: any) {
+      alert(err?.message || 'Failed to update report status.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -149,13 +158,24 @@ export const AdminReportsPage: React.FC = () => {
                     <StatusBadge status={report.status} />
                   </td>
                   <td className="p-4 text-right">
-                    <Link
-                      to={`/admin/reports/${report.id}`}
-                      className="px-3 py-1.5 rounded-lg bg-sahayak-blue text-white text-xs font-bold hover:bg-sahayak-blue-mid inline-flex items-center gap-1"
-                    >
-                      <span>Manage</span>
-                      <ArrowRight className="w-3 h-3" />
-                    </Link>
+                    <div className="flex items-center justify-end gap-2">
+                      {report.status !== 'RETURNED' && report.status !== 'CLOSED' && (
+                        <button
+                          onClick={() => handleQuickResolve(report.id)}
+                          className="px-2.5 py-1.5 rounded-lg bg-sahayak-success text-white text-[11px] font-bold hover:bg-sahayak-success/90 shadow-sm transition-all"
+                          title="Mark as Resolved & Returned"
+                        >
+                          Resolve
+                        </button>
+                      )}
+                      <Link
+                        to={`/admin/reports/${report.id}`}
+                        className="px-3 py-1.5 rounded-lg bg-sahayak-blue text-white text-xs font-bold hover:bg-sahayak-blue-mid inline-flex items-center gap-1"
+                      >
+                        <span>Manage</span>
+                        <ArrowRight className="w-3 h-3" />
+                      </Link>
+                    </div>
                   </td>
                 </tr>
               ))}

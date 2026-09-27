@@ -63,18 +63,31 @@ export const AdminCaseDetailPage: React.FC = () => {
     );
   }
 
-  const handleApproveClaim = () => {
-    if (vCase) {
-      verificationService.verifyCase(vCase.id, 'SEC-01', 'NIE-8842');
-      setActionSuccess('Ownership verified and Handover Passcode NIE-8842 issued to student claimant.');
+  const handleApproveClaim = async () => {
+    try {
+      if (vCase) {
+        await verificationService.verifyCase(vCase.id, 'SEC-01', 'NIE-8842');
+        setVCase(prev => prev ? { ...prev, status: 'VERIFIED', handoverOtp: 'NIE-8842' } : null);
+        setActionSuccess('Ownership verified and Handover Passcode NIE-8842 issued to student claimant.');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Failed to approve claim.');
     }
   };
 
-  const handleCompleteHandover = () => {
-    if (vCase) {
-      verificationService.completeHandover(vCase.id);
-      reportsService.updateStatus(report.id, 'RETURNED');
-      setActionSuccess('Physical handover marked complete. Item safely returned to owner.');
+  const handleCompleteHandover = async () => {
+    try {
+      if (vCase) {
+        await verificationService.completeHandover(vCase.id);
+      }
+      await reportsService.updateStatus(report.id, 'RETURNED');
+      setReport(prev => prev ? { ...prev, status: 'RETURNED' } : null);
+      if (vCase) {
+        setVCase(prev => prev ? { ...prev, status: 'RESOLVED' } : null);
+      }
+      setActionSuccess('Physical handover marked complete. Item safely resolved and returned to owner.');
+    } catch (err: any) {
+      alert(err?.message || 'Failed to complete handover.');
     }
   };
 

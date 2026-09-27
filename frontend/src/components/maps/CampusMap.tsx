@@ -25,79 +25,58 @@ export const CampusMap: React.FC<CampusMapProps> = ({
   const [isHeatmapMode, setIsHeatmapMode] = useState<boolean>(initialHeatmap);
   const [selectedBuilding, setSelectedBuilding] = useState<CampusLocation | null>(null);
 
+  const [heatmapData, setHeatmapData] = useState<any>(null);
+
   useEffect(() => {
-    async function loadLocs() {
+    async function loadData() {
       try {
-        const data = await api.locations.list();
-        if (Array.isArray(data) && data.length > 0) {
-          setLocations(data);
+        const [locData, heatRes] = await Promise.all([
+          api.locations.list(),
+          api.locations.heatmap()
+        ]);
+        if (Array.isArray(locData) && locData.length > 0) {
+          setLocations(locData);
+        }
+        if (heatRes && heatRes.points) {
+          setHeatmapData(heatRes);
         }
       } catch (err) {
-        console.warn('Failed to fetch live locations:', err);
+        console.warn('Failed to fetch live locations & heatmap:', err);
       }
     }
-    loadLocs();
+    loadData();
   }, []);
 
   // NIE North Campus Boundary
   const campusBoundaryCoords: [number, number][] = [
-    [12.3708164, 76.5857619],
-    [12.3704832, 76.5876098],
-    [12.3702353, 76.5878755],
-    [12.3702106, 76.5886288],
-    [12.3710493, 76.5885008],
-    [12.3709666, 76.5874306],
-    [12.3719324, 76.5874824],
-    [12.3724239, 76.5871614],
-    [12.3741434, 76.5870053],
-    [12.3750691, 76.5861900],
-    [12.3709411, 76.5840391],
-    [12.3708164, 76.5857619]
+    [12.3530, 76.6110],
+    [12.3565, 76.6115],
+    [12.3570, 76.6145],
+    [12.3530, 76.6150],
+    [12.3530, 76.6110]
   ];
 
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    const bounds = L.latLngBounds(campusBoundaryCoords);
+    // Center map around NIE North Campus
+    const centerLatLng: [number, number] = [12.3548, 76.6130];
 
     // Initialize Map
     const map = L.map(mapContainerRef.current, {
-      center: bounds.getCenter(),
+      center: centerLatLng,
       zoom: 17,
-      minZoom: 15,
+      minZoom: 14,
       maxZoom: 20,
-      maxBounds: bounds.pad(0.35),
-      maxBoundsViscosity: 0.95,
       zoomControl: false
     });
 
-    // Satellite base layer
+    // High-Resolution Satellite base layer
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       attribution: '&copy; Esri &bull; High-Res Satellite',
       maxZoom: 20,
       maxNativeZoom: 18,
-      minZoom: 15
-    }).addTo(map);
-
-    // Frosted Boundary Dim Mask
-    const worldOuter: [number, number][] = [[-90, -180], [-90, 180], [90, 180], [90, -180], [-90, -180]];
-    L.polygon([worldOuter, campusBoundaryCoords], {
-      color: '#070b14',
-      fillColor: '#070b14',
-      fillOpacity: 0.65,
-      weight: 0,
-      interactive: false
-    }).addTo(map);
-
-    // Campus Perimeter Glowing Outline
-    L.polygon(campusBoundaryCoords, {
-      color: '#05B6F3',
-      weight: 3,
-      opacity: 0.9,
-      fillColor: 'transparent',
-      fillOpacity: 0,
-      dashArray: '5, 8',
-      interactive: false
+      minZoom: 14
     }).addTo(map);
 
     L.control.zoom({ position: 'bottomright' }).addTo(map);
@@ -106,15 +85,13 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     markersGroupRef.current = markersGroup;
     mapInstanceRef.current = map;
 
-    map.fitBounds(bounds, { padding: [30, 30] });
-
     return () => {
       map.remove();
       mapInstanceRef.current = null;
     };
   }, []);
 
-  // Update Markers
+  // Update Markers & Live Heatmap
   useEffect(() => {
     if (!mapInstanceRef.current || !markersGroupRef.current) return;
 
@@ -126,6 +103,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
       return loc.zone === activeZoneFilter;
     });
 
+    // 1. Campus Landmark / Desk Markers
     filtered.forEach(loc => {
       const isSelected = selectedLocation === loc.name || selectedBuilding?.id === loc.id;
       const zoneColors: Record<string, string> = {
@@ -134,10 +112,11 @@ export const CampusMap: React.FC<CampusMapProps> = ({
         'Library': '#05B6F3',
         'Canteen': '#DDAD4B',
         'Parking': '#64748B',
-        'Gate': '#3F8F68'
+        'Gate': '#3F8F68',
+        'Admin': '#E06D53'
       };
 
-      const color = zoneColors[loc.zone] || '#05B6F3';
+      const color = zoneColors[loc.zone] || '#0375DE';
 
       const customIcon = L.divIcon({
         className: 'custom-map-pin',
@@ -156,7 +135,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
             cursor: pointer;
             ${isSelected ? 'transform: rotate(-45deg) scale(1.3); border-color: #DDAD4B;' : ''}
           ">
-            <span style="transform: rotate(45deg); font-size: 14px;">📍</span>
+            <span style="transform: rotate(45deg); font-size: 13px; font-weight: bold; color: white;">🏢</span>
           </div>
         `,
         iconSize: [32, 32],
@@ -167,10 +146,11 @@ export const CampusMap: React.FC<CampusMapProps> = ({
       const marker = L.marker([loc.latitude, loc.longitude], { icon: customIcon });
 
       const popupHtml = `
-        <div style="min-width: 170px; font-family: Inter, sans-serif; padding: 4px;">
-          <div style="font-weight: 700; font-size: 0.9rem; color: #18304A; margin-bottom: 2px;">${loc.name}</div>
-          <div style="font-size: 0.72rem; color: #0375DE; font-weight: 600; margin-bottom: 4px;">${loc.zone}</div>
-          <div style="font-size: 0.72rem; color: #5F6B76; margin-bottom: 6px;">${loc.floor || 'Campus Landmark'}</div>
+        <div style="min-width: 180px; font-family: Inter, sans-serif; padding: 4px;">
+          <div style="font-weight: 800; font-size: 0.95rem; color: #0C1E33; margin-bottom: 2px;">${loc.name}</div>
+          <div style="font-size: 0.72rem; color: #0375DE; font-weight: 700; margin-bottom: 4px;">Zone: ${loc.zone} (${loc.building})</div>
+          <div style="font-size: 0.75rem; color: #4A5A6A; margin-bottom: 6px;">Active Items Logged: <strong>${loc.itemCount || 0}</strong></div>
+          ${loc.hasCollectionDesk ? '<div style="background: #E8F5EE; color: #1E6B47; font-size: 0.7rem; font-weight: bold; padding: 2px 6px; border-radius: 4px; display: inline-block;">Proctor Collection Desk Active</div>' : ''}
         </div>
       `;
 
@@ -183,28 +163,74 @@ export const CampusMap: React.FC<CampusMapProps> = ({
       markersGroup.addLayer(marker);
     });
 
-    // If heatmap mode enabled, render hotspot circles
-    if (isHeatmapMode) {
-      const hotspots = [
-        { lat: 12.3713084, lng: 76.5869772, count: 12, label: 'MB Block CRs' },
-        { lat: 12.3728602, lng: 76.5856585, count: 9, label: 'Food Court' },
-        { lat: 12.3715731, lng: 76.5871760, count: 7, label: 'Library' },
-        { lat: 12.3714376, lng: 76.5847868, count: 5, label: 'SB Labs' }
-      ];
+    // 2. Real-Time Dynamic Heatmap from Live Database Reports
+    if (isHeatmapMode && heatmapData?.points) {
+      heatmapData.points.forEach((p: any) => {
+        if (p.totalCount > 0) {
+          const radius = Math.max(35, Math.min(90, 30 + p.totalCount * 15));
+          const opacity = Math.min(0.75, 0.35 + p.intensity * 0.4);
+          const color = p.totalCount >= 3 ? '#E04F43' : p.totalCount >= 1 ? '#F59E0B' : '#0375DE';
 
-      hotspots.forEach(h => {
-        const circle = L.circle([h.lat, h.lng], {
-          radius: 25,
-          color: '#B84F45',
-          fillColor: '#B84F45',
-          fillOpacity: 0.45,
-          weight: 2
-        });
-        circle.bindTooltip(`🔥 Activity Hotspot: ${h.label} (${h.count} reports logged)`, { permanent: false });
-        markersGroup.addLayer(circle);
+          const circle = L.circle([p.latitude, p.longitude], {
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: opacity,
+            weight: 2
+          });
+          circle.bindTooltip(`🔥 Live Activity Hotspot: ${p.name}<br/>• Total Logs: ${p.totalCount} (Lost: ${p.lostCount}, Found: ${p.foundCount}, Resolved: ${p.returnedCount || 0})`, { permanent: false });
+          markersGroup.addLayer(circle);
+        }
       });
     }
-  }, [activeZoneFilter, isHeatmapMode, selectedLocation, selectedBuilding, locations]);
+
+    // 3. Live Item Pins (Render actual lost/found item points)
+    if (heatmapData?.liveItems && heatmapData.liveItems.length > 0) {
+      heatmapData.liveItems.forEach((item: any) => {
+        const isLost = item.type === 'LOST';
+        const isResolved = item.status === 'RETURNED' || item.status === 'CLOSED';
+        const pinColor = isResolved ? '#10B981' : isLost ? '#EF4444' : '#3B82F6';
+        const symbol = isResolved ? '✓' : isLost ? '🔍' : '📦';
+
+        const itemIcon = L.divIcon({
+          className: 'item-live-pin',
+          html: `
+            <div style="
+              background: ${pinColor};
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border: 2px solid #ffffff;
+              box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+              cursor: pointer;
+              font-size: 11px;
+              color: white;
+            ">
+              ${symbol}
+            </div>
+          `,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
+          popupAnchor: [0, -13]
+        });
+
+        const itemMarker = L.marker([item.latitude, item.longitude], { icon: itemIcon });
+        const itemPopup = `
+          <div style="min-width: 170px; font-family: Inter, sans-serif; padding: 4px;">
+            <div style="font-weight: 800; font-size: 0.9rem; color: #0C1E33;">${item.title}</div>
+            <div style="font-size: 0.72rem; font-weight: 700; color: ${pinColor}; text-transform: uppercase;">${item.type} • ${item.status}</div>
+            <div style="font-size: 0.72rem; color: #4A5A6A; margin-top: 2px;">📍 ${item.incidentPlace || item.locationName}</div>
+            <div style="font-size: 0.7rem; color: #8A96A0;">📅 ${item.eventDate || 'Recent'}</div>
+          </div>
+        `;
+        itemMarker.bindPopup(itemPopup);
+        markersGroup.addLayer(itemMarker);
+      });
+    }
+  }, [activeZoneFilter, isHeatmapMode, selectedLocation, selectedBuilding, locations, heatmapData]);
 
   return (
     <div className="relative w-full h-[520px] rounded-2xl overflow-hidden neu-card p-0 border border-cream-warm shadow-neu-card">

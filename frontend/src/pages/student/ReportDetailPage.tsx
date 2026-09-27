@@ -160,21 +160,40 @@ export const ReportDetailPage: React.FC = () => {
               </div>
               <div>
                 <p className="text-xs font-bold text-sahayak-text-primary">
-                  {report.status === 'MATCHED' ? 'High-Confidence Neural Match Found' : 'Radar Scanning Campus Activity'}
+                  {report.status === 'RETURNED' ? 'Resolved & Handover Complete' : report.status === 'MATCHED' ? 'High-Confidence Neural Match Found' : 'Radar Scanning Campus Activity'}
                 </p>
                 <p className="text-[11px] text-sahayak-text-muted">
-                  Cross-referencing newly registered inventory on NIE North.
+                  {report.status === 'RETURNED' ? 'This item has been safely resolved and returned to its owner.' : 'Cross-referencing newly registered inventory on NIE North.'}
                 </p>
               </div>
             </div>
 
-            <Link
-              to="/student/matches"
-              className="px-4 py-2 rounded-xl bg-sahayak-blue text-white text-xs font-bold shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center gap-1.5"
-            >
-              <span>Open Match Center</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
+            <div className="flex items-center gap-2">
+              {report.status !== 'RETURNED' && report.status !== 'CLOSED' && (
+                <button
+                  onClick={async () => {
+                    try {
+                      await reportsService.updateStatus(report.id, 'RETURNED');
+                      setReport(prev => prev ? { ...prev, status: 'RETURNED' } : null);
+                    } catch (err: any) {
+                      alert(err?.message || 'Failed to resolve report.');
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-sahayak-success text-white text-xs font-bold shadow-neumorph hover:bg-sahayak-success/90 transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ShieldCheck className="w-4 h-4" />
+                  <span>Mark as Resolved</span>
+                </button>
+              )}
+
+              <Link
+                to="/student/matches"
+                className="px-4 py-2 rounded-xl bg-sahayak-blue text-white text-xs font-bold shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center gap-1.5"
+              >
+                <span>Open Match Center</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       </NeumorphicCard>

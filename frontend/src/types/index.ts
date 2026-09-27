@@ -95,6 +95,8 @@ export interface CampusLocation {
   id: string;
   name: string;
   zone: string;
+  building?: string;
+  campus?: string;
   floor?: string;
   room?: string;
   latitude: number;

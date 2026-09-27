@@ -58,6 +58,10 @@ class ReportService:
             loc = self.loc_repo.get_by_name(req.incident_place)
             if loc:
                 place_id = loc.id
+            else:
+                from app.services.location_service import LocationService
+                loc_svc = LocationService(self.db)
+                place_id = loc_svc.match_place_id_from_text(req.incident_place)
 
         # Generate text embedding
         combined_text = f"{req.title} {req.category} {req.description} {req.incident_place} {req.brand or ''} {req.color or ''}"

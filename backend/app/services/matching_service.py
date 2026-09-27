@@ -108,6 +108,21 @@ class MatchingService:
 
         return score, reasons
 
+    def _resolve_image_path(self, storage_path: str) -> Optional[str]:
+        if not storage_path:
+            return None
+        candidates = [
+            os.path.join(settings.STORAGE_LOCAL_DIR, storage_path),
+            os.path.join("uploads", storage_path),
+            os.path.join("../uploads", storage_path),
+            os.path.abspath(storage_path),
+            os.path.join("/run/media/zayan/Local Disk/SAHAYAK/uploads", storage_path)
+        ]
+        for c in candidates:
+            if os.path.exists(c) and os.path.isfile(c):
+                return c
+        return None
+
     def _compute_visual_similarity(self, lost: ItemReport, found: ItemReport) -> Tuple[float, List[str]]:
         reasons = []
         lost_img = lost.images[0] if lost.images else None
@@ -117,10 +132,10 @@ class MatchingService:
             return 0.0, reasons
 
         # Attempt to read both images from storage
-        path1 = os.path.join(settings.STORAGE_LOCAL_DIR, lost_img.storage_path)
-        path2 = os.path.join(settings.STORAGE_LOCAL_DIR, found_img.storage_path)
+        path1 = self._resolve_image_path(lost_img.storage_path)
+        path2 = self._resolve_image_path(found_img.storage_path)
 
-        if not os.path.exists(path1) or not os.path.exists(path2):
+        if not path1 or not path2:
             return 0.0, reasons
 
         try:
