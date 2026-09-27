@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
 import { SAHAYAKThread } from '../../components/ui/SAHAYAKThread';
@@ -11,7 +11,8 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Mail
+  Mail,
+  Info
 } from 'lucide-react';
 
 export const StudentLoginPage: React.FC = () => {
@@ -23,6 +24,10 @@ export const StudentLoginPage: React.FC = () => {
 
   const { loginStudent } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const from = (location.state as any)?.from || '/student';
+  const noticeMessage = (location.state as any)?.message;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +48,7 @@ export const StudentLoginPage: React.FC = () => {
     try {
       const success = await loginStudent(cleanEmail, password);
       if (success) {
-        navigate('/student');
+        navigate(from, { replace: true });
       } else {
         setError('Invalid email or password. Please check your credentials.');
       }
@@ -73,6 +78,13 @@ export const StudentLoginPage: React.FC = () => {
         {/* Card Form */}
         <NeumorphicCard className="p-6 sm:p-8 border border-sahayak-brown/15 shadow-neumorph">
           <form onSubmit={handleSubmit} className="space-y-4">
+            {noticeMessage && !error && (
+              <div className="p-3.5 rounded-xl bg-sahayak-blue-ice/80 border border-sahayak-blue/20 flex items-start gap-2.5 text-xs text-sahayak-blue font-medium">
+                <Info className="w-4 h-4 shrink-0 mt-0.5 text-sahayak-blue" />
+                <span>{noticeMessage}</span>
+              </div>
+            )}
+
             {error && (
               <div className="p-3.5 rounded-xl bg-sahayak-error-soft border border-sahayak-error/20 flex items-start gap-2.5 text-xs text-sahayak-error font-medium">
                 <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />

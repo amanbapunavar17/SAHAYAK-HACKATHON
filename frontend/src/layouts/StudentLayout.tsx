@@ -1,10 +1,19 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import { StudentHeader } from '../components/layout/StudentHeader';
 import { StudentSidebar } from '../components/layout/StudentSidebar';
 import { BottomNav } from '../components/layout/BottomNav';
+import { useAuth } from '../lib/authContext';
 
 export const StudentLayout: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  // Require student authentication
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  }
+
   return (
     <div className="min-h-screen flex bg-sahayak-cream text-sahayak-text-primary selection:bg-sahayak-blue/20 selection:text-sahayak-blue-deep font-sans">
       {/* Desktop & Tablet Sidebar */}
@@ -25,3 +34,4 @@ export const StudentLayout: React.FC = () => {
     </div>
   );
 };
+

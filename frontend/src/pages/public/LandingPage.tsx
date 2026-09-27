@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   Search, 
   UploadCloud, 
@@ -18,8 +18,20 @@ import {
 } from 'lucide-react';
 import { SAHAYAKThread } from '../../components/ui/SAHAYAKThread';
 import { NeumorphicCard } from '../../components/ui/NeumorphicCard';
+import { useAuth } from '../../lib/authContext';
 
 export const LandingPage: React.FC = () => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handleAction = (path: string, message: string) => {
+    if (isAuthenticated) {
+      navigate(path);
+    } else {
+      navigate('/login', { state: { from: path, message } });
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col">
       {/* Hero Section */}
@@ -60,21 +72,21 @@ export const LandingPage: React.FC = () => {
 
             {/* Main Action Buttons */}
             <div className="flex flex-col sm:flex-row items-center gap-4 pt-2 justify-center lg:justify-start">
-              <Link
-                to="/student/report-lost"
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 group"
+              <button
+                onClick={() => handleAction('/student/report-lost', 'Please sign in with your NIE institutional credentials to report a lost item.')}
+                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-sahayak-blue text-white font-heading font-bold text-sm shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center justify-center gap-2 group cursor-pointer"
               >
                 <span>I Lost Something</span>
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
+              </button>
               
-              <Link
-                to="/student/report-found"
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/20 text-sahayak-blue-deep font-heading font-bold text-sm shadow-neumorph hover:border-sahayak-blue transition-all flex items-center justify-center gap-2"
+              <button
+                onClick={() => handleAction('/student/report-found', 'Please sign in with your NIE institutional credentials to report a found item.')}
+                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-sahayak-cream-soft border border-sahayak-brown/20 text-sahayak-blue-deep font-heading font-bold text-sm shadow-neumorph hover:border-sahayak-blue transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <UploadCloud className="w-4 h-4 text-sahayak-blue" />
                 <span>I Found Something</span>
-              </Link>
+              </button>
             </div>
 
             {/* Trust Badges */}
@@ -208,13 +220,13 @@ export const LandingPage: React.FC = () => {
               Live collection points at Sir MV Block, Administrative Block, Central Library, and North Cafeteria.
             </p>
           </div>
-          <Link
-            to="/student/map"
-            className="px-6 py-3 rounded-xl bg-sahayak-blue text-white text-sm font-bold shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center gap-2 whitespace-nowrap"
+          <button
+            onClick={() => handleAction('/student/map', 'Please sign in with your NIE credentials to explore the campus map.')}
+            className="px-6 py-3 rounded-xl bg-sahayak-blue text-white text-sm font-bold shadow-neumorph hover:bg-sahayak-blue-mid transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer"
           >
             <Compass className="w-4 h-4 text-sahayak-gold" />
             <span>Explore Campus Map</span>
-          </Link>
+          </button>
         </div>
       </section>
     </div>
