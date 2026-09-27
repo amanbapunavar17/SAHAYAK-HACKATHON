@@ -31,7 +31,16 @@ export const reportsService = {
     return getLocal<ItemReport[]>(REPORTS_KEY, mockItemReports || mockReports);
   },
 
-  getAll: (): ItemReport[] => {
+  getAll: async (): Promise<ItemReport[]> => {
+    try {
+      const liveReports = await api.reports.list();
+      if (liveReports && liveReports.length > 0) {
+        setLocal(REPORTS_KEY, liveReports);
+        return liveReports;
+      }
+    } catch (err) {
+      console.warn('Could not fetch live reports, using cached reports:', err);
+    }
     return reportsService.getReports();
   },
 
@@ -46,7 +55,13 @@ export const reportsService = {
     return found || reports[0];
   },
 
-  getById: (id: string): ItemReport => {
+  getById: async (id: string): Promise<ItemReport> => {
+    try {
+      const live = await api.reports.get(id);
+      if (live) return live;
+    } catch (err) {
+      console.warn('Could not fetch live report, using local cache:', err);
+    }
     return reportsService.getReportById(id);
   },
 

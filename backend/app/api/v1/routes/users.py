@@ -37,9 +37,24 @@ def get_profile(current_user: User = Depends(get_current_user)):
 def update_profile(req: UserProfileUpdateRequest, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     svc = UserService(db)
     updated_user = svc.update_user_profile(current_user.id, req)
-    return api_response({
+    
+    user_data = {
         "id": updated_user.id,
-        "fullName": updated_user.full_name,
         "email": updated_user.email,
-        "phone": updated_user.phone
-    })
+        "role": updated_user.role,
+        "fullName": updated_user.full_name,
+        "name": updated_user.full_name,
+        "phone": updated_user.phone,
+        "avatar": updated_user.avatar_url,
+        "usn": updated_user.student_profile.usn if updated_user.student_profile else "",
+        "department": updated_user.student_profile.branch if updated_user.student_profile else "",
+        "branch": updated_user.student_profile.branch if updated_user.student_profile else "",
+        "semester": updated_user.student_profile.semester if updated_user.student_profile else 5,
+        "section": updated_user.student_profile.section if updated_user.student_profile else "A",
+        "academicYear": updated_user.student_profile.academic_year if updated_user.student_profile else "2024-2025",
+        "emergencyContact": updated_user.student_profile.emergency_contact if updated_user.student_profile else "",
+        "points": updated_user.student_profile.points_balance if updated_user.student_profile else 0,
+        "badgeLevel": updated_user.student_profile.badge_level if updated_user.student_profile else "Campus Guardian Lv. 1",
+        "privacyShieldActive": updated_user.student_profile.privacy_shield_active if updated_user.student_profile else True
+    }
+    return api_response(user_data)

@@ -4,7 +4,8 @@
  * with robust local fallback for resilient dev experience.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
+const PRIMARY_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
+const FALLBACK_API_BASES = ['http://127.0.0.1:8000/api/v1', 'http://localhost:8000/api/v1'];
 
 export interface ApiResponseEnvelope<T> {
   data: T | null;
@@ -27,36 +28,55 @@ export function removeAuthToken() {
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${API_BASE}${endpoint}`;
-  const headers = new Headers(options.headers || {});
-
-  if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
-    headers.set('Content-Type', 'application/json');
-  }
-
   const token = getAuthToken();
-  if (token && !headers.has('Authorization')) {
-    headers.set('Authorization', `Bearer ${token}`);
+  const baseHeaders: Record<string, string> = {};
+
+  if (!(options.body instanceof FormData)) {
+    baseHeaders['Content-Type'] = 'application/json';
+  }
+  if (token) {
+    baseHeaders['Authorization'] = `Bearer ${token}`;
   }
 
-  try {
-    const response = await fetch(url, {
-      ...options,
-      headers
-    });
+  const customHeaders = options.headers instanceof Headers
+    ? Object.fromEntries(options.headers.entries())
+    : (options.headers as Record<string, string>) || {};
 
-    const json: ApiResponseEnvelope<T> = await response.json();
+  const mergedHeaders = { ...baseHeaders, ...customHeaders };
 
-    if (!response.ok || json.error) {
-      const errorMsg = json.error?.message || `HTTP ${response.status}: ${response.statusText}`;
-      throw new Error(errorMsg);
+  const urlsToTry = [
+    `${PRIMARY_API_BASE}${endpoint}`,
+    ...FALLBACK_API_BASES.map(b => `${b}${endpoint}`)
+  ];
+
+  let lastError: any = null;
+
+  for (const url of urlsToTry) {
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers: mergedHeaders
+      });
+
+      const json: ApiResponseEnvelope<T> = await response.json();
+
+      if (!response.ok || json.error) {
+        const errorMsg = json.error?.message || `HTTP ${response.status}: ${response.statusText}`;
+        throw new Error(errorMsg);
+      }
+
+      return json.data as T;
+    } catch (err: any) {
+      lastError = err;
+      // If it was a 4xx HTTP response with valid JSON error, don't retry other hosts
+      if (err.message && (err.message.includes('Invalid') || err.message.includes('HTTP 4') || err.message.includes('already exists'))) {
+        throw err;
+      }
+      // Otherwise continue to next fallback URL in case of CORS or connection issue
     }
-
-    return json.data as T;
-  } catch (err: any) {
-    console.warn(`[API Call ${endpoint}]:`, err.message);
-    throw err;
   }
+
+  throw lastError || new Error('Unable to connect to SAHAYAK Backend API');
 }
 
 export const api = {

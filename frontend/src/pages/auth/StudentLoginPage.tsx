@@ -11,8 +11,17 @@ import {
   ShieldCheck, 
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  UserCheck,
+  UserPlus
 } from 'lucide-react';
+
+const QUICK_DEMO_STUDENTS = [
+  { name: 'Rahul S. Verma', email: 'rahul.nie@nie.ac.in', usn: '4NI21CS089', dept: 'CSE' },
+  { name: 'Zayan Ahmed', email: 'zayan@nie.ac.in', usn: '4NI22CS142', dept: 'CSE' },
+  { name: 'Ananya Rao', email: 'ananya.nie@nie.ac.in', usn: '4NI22IS012', dept: 'ISE' },
+  { name: 'Karthik Gowda', email: 'karthik.nie@nie.ac.in', usn: '4NI21EC045', dept: 'ECE' }
+];
 
 export const StudentLoginPage: React.FC = () => {
   const [email, setEmail] = useState('rahul.nie@nie.ac.in');
@@ -21,8 +30,14 @@ export const StudentLoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { loginStudent } = useAuth();
+  const { loginStudent, registerStudent } = useAuth();
   const navigate = useNavigate();
+
+  const handleQuickSelect = (studentEmail: string) => {
+    setEmail(studentEmail);
+    setPassword('Student@123');
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +53,34 @@ export const StudentLoginPage: React.FC = () => {
       }
     } catch (err: any) {
       setError(err?.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickRegisterAndLogin = async () => {
+    if (!email) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const prefix = email.split('@')[0] || 'student';
+      const cleanName = prefix.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+      const randomUSN = `4NI22CS${Math.floor(100 + Math.random() * 900)}`;
+
+      await registerStudent({
+        email,
+        password: password || 'Student@123',
+        fullName: cleanName || 'NIE Student',
+        name: cleanName || 'NIE Student',
+        usn: randomUSN,
+        phone: '+91 98860 12345',
+        department: 'Computer Science & Engineering',
+        semester: 5,
+        section: 'A'
+      });
+      navigate('/student');
+    } catch (err: any) {
+      setError(err?.message || 'Quick registration failed. Please use regular registration form.');
     } finally {
       setLoading(false);
     }
@@ -59,13 +102,55 @@ export const StudentLoginPage: React.FC = () => {
           </p>
         </div>
 
+        {/* Quick Demo Accounts Selection */}
+        <div className="p-3 rounded-2xl bg-sahayak-cream border border-sahayak-brown/15 shadow-neumorph-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-sahayak-text-secondary uppercase flex items-center gap-1">
+              <UserCheck className="w-3.5 h-3.5 text-sahayak-blue" />
+              <span>1-Click Verified Student Accounts</span>
+            </span>
+            <span className="text-[10px] text-sahayak-text-muted">Password: Student@123</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {QUICK_DEMO_STUDENTS.map((st) => (
+              <button
+                key={st.email}
+                type="button"
+                onClick={() => handleQuickSelect(st.email)}
+                className={`p-2 rounded-xl text-left transition-all border text-xs ${
+                  email === st.email 
+                    ? 'bg-sahayak-blue text-white border-sahayak-blue shadow-sm' 
+                    : 'bg-sahayak-cream-soft border-sahayak-brown/15 text-sahayak-text-primary hover:border-sahayak-blue/40'
+                }`}
+              >
+                <p className="font-bold truncate text-[11px]">{st.name}</p>
+                <p className={`text-[10px] truncate ${email === st.email ? 'text-sahayak-gold' : 'text-sahayak-text-muted'}`}>
+                  {st.usn} • {st.dept}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Card Form */}
         <NeumorphicCard className="p-6 sm:p-8 border border-sahayak-brown/15 shadow-neumorph">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="p-3.5 rounded-xl bg-sahayak-error-soft border border-sahayak-error/20 flex items-start gap-2.5 text-xs text-sahayak-error font-medium">
-                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                <span>{error}</span>
+              <div className="p-3.5 rounded-xl bg-sahayak-error-soft border border-sahayak-error/20 flex flex-col gap-2 text-xs text-sahayak-error font-medium">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  <span>{error}</span>
+                </div>
+                {error.includes('Invalid') && (
+                  <button
+                    type="button"
+                    onClick={handleQuickRegisterAndLogin}
+                    className="self-start inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sahayak-blue text-white font-bold text-[11px] hover:bg-sahayak-blue-mid mt-1"
+                  >
+                    <UserPlus className="w-3 h-3 text-sahayak-gold" />
+                    <span>Create & Activate Account for {email}</span>
+                  </button>
+                )}
               </div>
             )}
 
@@ -78,7 +163,7 @@ export const StudentLoginPage: React.FC = () => {
                 <input
                   type="email"
                   required
-                  placeholder="e.g. rahul.sharma@nie.ac.in"
+                  placeholder="e.g. rahul.nie@nie.ac.in"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full bg-sahayak-cream border border-sahayak-brown/20 rounded-xl px-4 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue transition-all"
