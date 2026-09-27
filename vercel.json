@@ -8,6 +8,10 @@
       "destination": "/api/index.py"
     },
     {
+      "source": "/health",
+      "destination": "/api/index.py"
+    },
+    {
       "source": "/docs",
       "destination": "/api/index.py"
     },
@@ -16,11 +20,7 @@
       "destination": "/api/index.py"
     },
     {
-      "source": "/health",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/|health|docs|openapi.json|assets/).*)",
       "destination": "/index.html"
     }
   ]

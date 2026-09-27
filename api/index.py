@@ -13,6 +13,20 @@ try:
 except ImportError:
     from app.main import app
 
+@app.middleware("http")
+async def log_requests(request, call_next):
+    return await call_next(request)
+
+@app.api_route("/{path_name:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH"])
+async def catch_all(path_name: str):
+    routes = [route.path for route in app.routes]
+    return {
+        "status": "online",
+        "requested_path": f"/{path_name}",
+        "registered_routes": routes
+    }
+
+
 
 
 
