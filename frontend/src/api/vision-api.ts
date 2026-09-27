@@ -6,11 +6,16 @@ import {
   CandidatePayload
 } from './api-contracts';
 
+const API_BASE =
+  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 const CANDIDATE_BASES = [
+  `${API_BASE}/api/v1`,
   '/api/v1',
   'http://127.0.0.1:8000/api/v1',
-  'http://localhost:8000/api/v1'
+  'http://localhost:8000/api/v1',
 ];
+
 
 export class VisionApiClient {
   private async fetchWithFallback(endpoint: string, options: RequestInit = {}): Promise<any> {
