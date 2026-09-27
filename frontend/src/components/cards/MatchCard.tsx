@@ -5,6 +5,8 @@ import { SAHAYAKThread } from '../ui/SAHAYAKThread';
 import { ArrowRight, Sparkles, MapPin, Calendar, CheckCircle, ShieldAlert, Cpu, Eye } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+import { resolveImageUrl, handleImageError } from '../../lib/utils';
+
 export interface MatchCardProps {
   match: MatchItem;
 }
@@ -16,8 +18,8 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
     'Spatial coordinates match Sir MV Block vicinity'
   ];
 
-  const lostImg = lostReport?.images?.[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=400';
-  const foundImg = foundReport?.images?.[0]?.url || 'https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=400';
+  const lostImg = resolveImageUrl(lostReport?.images?.[0]?.url, lostReport?.category as string);
+  const foundImg = resolveImageUrl(foundReport?.images?.[0]?.url, foundReport?.category as string);
 
   const descA = signals?.descriptionA;
   const descB = signals?.descriptionB;
@@ -73,7 +75,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 <img
                   src={lostImg}
                   alt={lostReport?.title || 'Lost Item'}
+                  onError={(e) => handleImageError(e, lostReport?.category as string)}
                   className="w-14 h-14 rounded-lg object-cover bg-sahayak-cream-soft shrink-0 border border-sahayak-brown/15"
+                  loading="lazy"
                 />
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xs font-bold text-sahayak-text-primary truncate">{lostReport?.title || 'Reported Lost Item'}</h4>
@@ -111,7 +115,9 @@ export const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
                 <img
                   src={foundImg}
                   alt={foundReport?.title || 'Found Item'}
+                  onError={(e) => handleImageError(e, foundReport?.category as string)}
                   className="w-14 h-14 rounded-lg object-cover bg-sahayak-cream-soft shrink-0 border border-sahayak-brown/15"
+                  loading="lazy"
                 />
                 <div className="flex-1 min-w-0">
                   <h4 className="text-xs font-bold text-sahayak-text-primary truncate">{foundReport?.title || 'Recovered Item'}</h4>

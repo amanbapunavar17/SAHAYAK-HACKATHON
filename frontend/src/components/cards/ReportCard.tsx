@@ -4,7 +4,7 @@ import { NeumorphicCard } from '../ui/NeumorphicCard';
 import { StatusBadge } from '../ui/StatusBadge';
 import { MapPin, Calendar, Clock, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { formatDate } from '../../lib/utils';
+import { formatDate, resolveImageUrl, handleImageError } from '../../lib/utils';
 
 export interface ReportCardProps {
   report: ItemReport;
@@ -13,7 +13,7 @@ export interface ReportCardProps {
 
 export const ReportCard: React.FC<ReportCardProps> = ({ report, showActions = true }) => {
   const isLost = report.type === 'LOST';
-  const primaryImg = report.images?.[0]?.url || 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500';
+  const primaryImg = resolveImageUrl(report.images?.[0]?.url, report.category as string);
   const dateDisplay = report.incidentDate || report.dateLostOrFound;
   const timeDisplay = report.incidentTime || report.timeLostOrFound || 'Daytime';
 
@@ -24,7 +24,9 @@ export const ReportCard: React.FC<ReportCardProps> = ({ report, showActions = tr
         <img
           src={primaryImg}
           alt={report.title}
+          onError={(e) => handleImageError(e, report.category as string)}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          loading="lazy"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
         
