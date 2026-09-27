@@ -4,8 +4,16 @@
  * with robust local fallback for resilient dev experience.
  */
 
-const PRIMARY_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-const FALLBACK_API_BASES = ['http://127.0.0.1:8000/api/v1', 'http://localhost:8000/api/v1'];
+const API_ORIGIN =
+  import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+const PRIMARY_API_BASE =
+  `${API_ORIGIN.replace(/\/$/, '')}/api/v1`;
+
+const FALLBACK_API_BASES = [
+  'http://127.0.0.1:8000/api/v1',
+  'http://localhost:8000/api/v1'
+];
 
 export interface ApiResponseEnvelope<T> {
   data: T | null;
