@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
 import { reportsService, assistantService } from '../../lib/services';
@@ -15,12 +15,16 @@ import {
   Tag, 
   ArrowRight, 
   CheckCircle2, 
-  AlertCircle,
-  HelpCircle,
-  ShieldCheck,
-  ChevronRight,
-  Eye,
-  Info
+  AlertCircle, 
+  HelpCircle, 
+  ShieldCheck, 
+  ChevronRight, 
+  Eye, 
+  Info,
+  Camera,
+  Image as ImageIcon,
+  X,
+  FileText
 } from 'lucide-react';
 
 const CATEGORIES: ItemCategory[] = [
@@ -37,6 +41,7 @@ const CATEGORIES: ItemCategory[] = [
 const CAMPUS_LOCATIONS = [
   'Sir MV Block - 2nd Floor Labs',
   'Sir MV Block - Room 304 Lecture Hall',
+  'SB Block (Computing & AI Labs)',
   'Central Library - Ground Floor Reading Hall',
   'Central Library - 1st Floor Digital Center',
   'North Canteen - Main Dining Area',
@@ -48,10 +53,8 @@ const CAMPUS_LOCATIONS = [
 export const ReportLostPage: React.FC = () => {
   const { studentUser } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Step 1: Pre-search / Check Found reports
-  // Step 2: Fill Lost Form
-  // Step 3: Success Confirmation
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -68,13 +71,60 @@ export const ReportLostPage: React.FC = () => {
   const [color, setColor] = useState('');
   const [distinguishingFeatures, setDistinguishingFeatures] = useState('');
 
-  // Image
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=60');
+  // Image upload state
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=60');
   const [imageSource, setImageSource] = useState<ImageSource>('USER_UPLOADED');
+  const [dragActive, setDragActive] = useState(false);
 
   const [aiAssisting, setAiAssisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
+
+  // Handle local file selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImageSource('USER_UPLOADED');
+      
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        if (uploadEvent.target?.result) {
+          setImagePreview(uploadEvent.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      setImageFile(file);
+      setImageSource('USER_UPLOADED');
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        if (uploadEvent.target?.result) {
+          setImagePreview(uploadEvent.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAiAssistance = async () => {
     if (!title) return;
@@ -104,7 +154,7 @@ export const ReportLostPage: React.FC = () => {
         images: [
           {
             id: `img-${Date.now()}`,
-            url: imageUrl,
+            url: imagePreview,
             source: imageSource,
             isReference: imageSource === 'REFERENCE_IMAGE',
             uploadedAt: new Date().toISOString()
@@ -114,10 +164,10 @@ export const ReportLostPage: React.FC = () => {
         color,
         distinguishingFeatures,
         reporterId: studentUser?.id || 'std-1',
-        reporterName: studentUser?.fullName || 'Rahul Sharma',
+        reporterName: studentUser?.fullName || studentUser?.name || 'Rahul Sharma',
         reporterUSN: studentUser?.usn || '4NI21CS089',
         isAnonymous: false
-      });
+      }, imageFile);
 
       setCreatedReportId(report.id);
       setStep(3);
@@ -146,7 +196,7 @@ export const ReportLostPage: React.FC = () => {
         </div>
       </div>
 
-      {/* STEP 1: Pre-Search Filter (Check if already turned in) */}
+      {/* STEP 1: Pre-Search Filter */}
       {step === 1 && (
         <NeumorphicCard className="p-6 sm:p-8 border border-sahayak-brown/15 space-y-6">
           <div className="flex items-center gap-3 p-4 rounded-xl bg-sahayak-blue-ice/50 border border-sahayak-blue-sky/30">
@@ -184,7 +234,7 @@ export const ReportLostPage: React.FC = () => {
                   <p className="text-[11px] text-sahayak-text-muted">Found at Sir MV Block</p>
                 </div>
                 <Link
-                  to="/student/matches/m-1"
+                  to="/student/matches"
                   className="px-2.5 py-1 rounded-lg bg-sahayak-blue text-white text-[11px] font-bold"
                 >
                   Match
@@ -193,16 +243,16 @@ export const ReportLostPage: React.FC = () => {
 
               <div className="p-3 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 flex items-center gap-3">
                 <img
-                  src="https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=200&auto=format&fit=crop&q=60"
+                  src="https://images.unsplash.com/photo-1587145820266-a5951ee6f620?w=200&auto=format&fit=crop&q=60"
                   alt="Item"
                   className="w-12 h-12 rounded-lg object-cover"
                 />
                 <div className="flex-1 min-w-0">
-                  <h4 className="font-bold text-xs text-sahayak-text-primary truncate">Casio fx-991CW Scientific</h4>
-                  <p className="text-[11px] text-sahayak-text-muted">Found at Central Library</p>
+                  <h4 className="font-bold text-xs text-sahayak-text-primary truncate">Casio fx-991EX Calculator</h4>
+                  <p className="text-[11px] text-sahayak-text-muted">Found at MB-204</p>
                 </div>
                 <Link
-                  to="/student/matches/m-2"
+                  to="/student/matches"
                   className="px-2.5 py-1 rounded-lg bg-sahayak-blue text-white text-[11px] font-bold"
                 >
                   Match
@@ -306,44 +356,105 @@ export const ReportLostPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Image Upload & Source Attribution */}
+            {/* Real Interactive Image Upload Section */}
             <div className="space-y-3 p-4 rounded-xl bg-sahayak-cream border border-sahayak-brown/15">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider">
-                  Item Photo / Reference Image
+                <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-sahayak-blue" />
+                  <span>Item Photo / Reference Image Upload</span>
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] text-sahayak-text-muted">Source:</span>
+                  <span className="text-[11px] text-sahayak-text-muted">Type:</span>
                   <select
                     value={imageSource}
                     onChange={(e) => setImageSource(e.target.value as ImageSource)}
                     className="text-xs bg-sahayak-cream-soft border border-sahayak-brown/20 rounded-lg px-2 py-1 text-sahayak-text-primary"
                   >
-                    <option value="USER_UPLOADED">My Photo (Captured Prior)</option>
-                    <option value="REFERENCE_IMAGE">Online Reference Image (Catalog)</option>
+                    <option value="USER_UPLOADED">My Photo (Original)</option>
+                    <option value="REFERENCE_IMAGE">Online Reference Catalog</option>
                     <option value="USER_CAPTURED">Camera Capture</option>
                   </select>
                 </div>
               </div>
 
-              {imageSource === 'REFERENCE_IMAGE' && (
-                <p className="text-[11px] text-sahayak-gold-dark bg-sahayak-gold-soft/50 p-2 rounded-lg">
-                  Notice: This image will be labeled as a Reference Material to prevent verification confusion.
-                </p>
-              )}
-
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <img
-                  src={imageUrl}
-                  alt="Item Preview"
-                  className="w-24 h-24 rounded-xl object-cover border border-sahayak-brown/20 shadow-sm"
+              {/* Drag & Drop File Selector Zone */}
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                  dragActive 
+                    ? 'border-sahayak-blue bg-sahayak-blue-ice/60 scale-[1.01]' 
+                    : 'border-sahayak-brown/25 bg-sahayak-cream-soft hover:border-sahayak-blue/60 hover:bg-sahayak-cream'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
                 />
-                <div className="flex-1 w-full space-y-2">
+
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-sahayak-blue/10 text-sahayak-blue flex items-center justify-center shadow-neumorph-sm">
+                    <UploadCloud className="w-6 h-6 text-sahayak-blue" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-sahayak-text-primary">
+                      Click to Browse or Drag & Drop Image File
+                    </p>
+                    <p className="text-[11px] text-sahayak-text-muted mt-0.5">
+                      Supports PNG, JPG, or WEBP (Max 10MB)
+                    </p>
+                  </div>
+                  {imageFile && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sahayak-success-soft text-sahayak-success text-xs font-bold mt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{imageFile.name} ({(imageFile.size / 1024).toFixed(1)} KB)</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview & Image URL Alternative */}
+              <div className="flex flex-col sm:flex-row gap-4 items-center pt-2">
+                <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-sahayak-brown/20 shadow-sm shrink-0 bg-sahayak-cream-soft flex items-center justify-center">
+                  <img
+                    src={imagePreview}
+                    alt="Item Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  {imageFile && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageFile(null);
+                        setImagePreview('https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500&auto=format&fit=crop&q=60');
+                      }}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-sahayak-error text-white hover:opacity-90 shadow-sm"
+                      title="Remove custom photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 w-full space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sahayak-text-secondary uppercase">
+                    Or paste image web URL:
+                  </label>
                   <input
                     type="text"
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Paste image URL or choose file"
+                    value={imagePreview}
+                    onChange={(e) => {
+                      setImagePreview(e.target.value);
+                      setImageFile(null);
+                    }}
+                    placeholder="https://example.com/item.jpg"
                     className="w-full bg-sahayak-cream-soft border border-sahayak-brown/20 rounded-xl px-3 py-2 text-xs text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue"
                   />
                   <p className="text-[11px] text-sahayak-text-muted">

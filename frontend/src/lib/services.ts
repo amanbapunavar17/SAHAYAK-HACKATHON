@@ -1,5 +1,6 @@
 import { ItemReport, MatchItem, VerificationCase, AuditEvent, Message } from '../types';
 import { mockReports, mockMatches, mockVerificationCases, mockAuditEvents, mockMessages, mockItemReports } from './mockData';
+import { api } from './api';
 
 // Local storage keys
 const REPORTS_KEY = 'sahayak_reports';
@@ -49,10 +50,55 @@ export const reportsService = {
     return reportsService.getReportById(id);
   },
 
-  createReport: (reportData: Partial<ItemReport>): ItemReport => {
+  createReport: async (reportData: Partial<ItemReport>, imageFile?: File | null): Promise<ItemReport> => {
     const reports = reportsService.getReports();
+    const tempId = `rep_${Date.now().toString().slice(-4)}`;
+    let finalId = tempId;
+    let finalImageUrl = reportData.images && reportData.images.length > 0 
+      ? reportData.images[0].url 
+      : 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500';
+
+    try {
+      // 1. Create Report in FastAPI Backend DB
+      const backendPayload = {
+        report_type: reportData.type || 'LOST',
+        title: reportData.title || 'Untitled Item',
+        category: reportData.category || 'OTHER',
+        description: reportData.description || '',
+        incident_place: reportData.incidentPlace || 'Sir MV Block',
+        current_location: reportData.currentLocation || 'NIE Main Security Desk Locker',
+        event_date: reportData.incidentDate || new Date().toISOString().split('T')[0],
+        event_time: reportData.incidentTime || '12:00',
+        brand: reportData.brand,
+        color: reportData.color,
+        material: reportData.material,
+        size: reportData.size,
+        distinguishing_marks: reportData.distinguishingFeatures,
+        is_anonymous: reportData.isAnonymous || false
+      };
+
+      const res = await api.reports.create(backendPayload);
+      if (res && res.id) {
+        finalId = res.id;
+      }
+
+      // 2. Upload actual image file if provided
+      if (imageFile && finalId) {
+        try {
+          const imgRes = await api.reports.uploadImage(finalId, imageFile, true);
+          if (imgRes && imgRes.url) {
+            finalImageUrl = imgRes.url;
+          }
+        } catch (imgErr) {
+          console.warn('Image upload error:', imgErr);
+        }
+      }
+    } catch (apiErr) {
+      console.warn('Backend report creation offline fallback:', apiErr);
+    }
+
     const newReport: ItemReport = {
-      id: `rep_${Date.now().toString().slice(-4)}`,
+      id: finalId,
       type: reportData.type || 'LOST',
       title: reportData.title || 'Untitled Item',
       category: reportData.category || 'OTHER',
@@ -61,11 +107,11 @@ export const reportsService = {
       currentLocation: reportData.currentLocation || 'NIE Main Security Desk Locker',
       incidentDate: reportData.incidentDate || new Date().toISOString().split('T')[0],
       incidentTime: reportData.incidentTime || '12:00',
-      images: reportData.images && reportData.images.length > 0 ? reportData.images : [
+      images: [
         {
           id: `img-${Date.now()}`,
-          url: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=500',
-          source: 'USER_UPLOADED',
+          url: finalImageUrl,
+          source: (reportData.images?.[0]?.source as any) || 'USER_UPLOADED',
           uploadedAt: new Date().toISOString()
         }
       ],
@@ -91,7 +137,7 @@ export const reportsService = {
       actor: newReport.reporterName,
       status: 'SUCCESS',
       caseId: newReport.id,
-      description: `New ${newReport.type} report created: ${newReport.title} at ${newReport.incidentPlace}`
+      description: `New ${newReport.type} report registered in database: ${newReport.title} at ${newReport.incidentPlace}`
     });
 
     return newReport;
@@ -104,6 +150,9 @@ export const reportsService = {
       reports[idx].status = status;
       reports[idx].updatedAt = new Date().toISOString();
       setLocal(REPORTS_KEY, reports);
+
+      // Async backend status transition
+      api.reports.updateStatus(id, status).catch(e => console.warn('Status sync notice:', e));
       return reports[idx];
     }
     return undefined;

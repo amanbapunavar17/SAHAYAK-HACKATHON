@@ -60,7 +60,7 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ onToggleSidebar })
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gold-soft border border-gold/40 rounded-xl text-xs font-bold text-primary-dark shadow-sm hover:scale-105 transition-transform"
         >
           <Award className="w-4 h-4 text-gold-dark" />
-          <span>{user?.finderPoints || 480} Pts</span>
+          <span>{user?.points ?? user?.finderPoints ?? 240} Pts</span>
         </Link>
 
         {/* AI Assistant Pill */}
@@ -93,15 +93,15 @@ export const StudentHeader: React.FC<StudentHeaderProps> = ({ onToggleSidebar })
         <div className="flex items-center gap-2 pl-2 border-l border-cream-warm">
           <Link to="/student/profile" className="flex items-center gap-2 group">
             <img
-              src={user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
-              alt={user?.name || 'User'}
+              src={user?.avatar || user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80'}
+              alt={user?.fullName || user?.name || 'User'}
               className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl object-cover border border-primary-dark/20 group-hover:scale-105 transition-transform shadow-sm"
             />
             <div className="hidden xl:flex flex-col text-left">
               <span className="text-xs font-bold text-sahayak-text leading-tight group-hover:text-primary">
-                {user?.name?.split(' ')[0] || 'Zayan'}
+                {(user?.fullName || user?.name || 'Student').split(' ')[0]}
               </span>
-              <span className="text-[10px] text-sahayak-muted">{user?.usn || '4NI22CS142'}</span>
+              <span className="text-[10px] text-sahayak-muted">{user?.usn || '4NI21CS089'}</span>
             </div>
           </Link>
 

@@ -55,6 +55,7 @@ export interface User {
   role?: UserRole | string;
   usn?: string;
   department?: string;
+  branch?: string;
   semester?: number;
   section?: string;
   avatar?: string;
@@ -63,12 +64,14 @@ export interface User {
   finderPoints?: number;
   recoveredCount?: number;
   phone?: string;
+  emergencyContact?: string;
   badgeLevel?: string;
 }
 
 export interface StudentProfile extends User {
   academicYear?: string;
   emergencyContact?: string;
+  branch?: string;
   notificationsEnabled?: boolean;
   emailAlertsEnabled?: boolean;
   privacyShieldActive?: boolean;
@@ -128,6 +131,8 @@ export interface ItemReport {
   brand?: string;
   color?: string;
   primaryColor?: string;
+  material?: string;
+  size?: string;
   distinguishingFeatures?: string;
   identifyingMarks?: string;
   secretVerificationClue?: string;

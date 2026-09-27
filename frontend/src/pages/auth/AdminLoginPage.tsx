@@ -13,8 +13,8 @@ import {
 } from 'lucide-react';
 
 export const AdminLoginPage: React.FC = () => {
-  const [email, setEmail] = useState('security.proctor@nie.ac.in');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('admin@nie.ac.in');
+  const [password, setPassword] = useState('Admin@123');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -33,8 +33,8 @@ export const AdminLoginPage: React.FC = () => {
       } else {
         setError('Unauthorized access. Invalid proctor credentials.');
       }
-    } catch (err) {
-      setError('An error occurred during proctor verification.');
+    } catch (err: any) {
+      setError(err?.message || 'Unauthorized access. Please verify administrator credentials.');
     } finally {
       setLoading(false);
     }

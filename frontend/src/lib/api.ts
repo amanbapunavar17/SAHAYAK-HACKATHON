@@ -83,6 +83,16 @@ export const api = {
     me: () => request<any>('/auth/me')
   },
 
+  // Users
+  users: {
+    getProfile: () => request<any>('/users/profile'),
+    updateProfile: (profileData: any) =>
+      request<any>('/users/profile', {
+        method: 'PATCH',
+        body: JSON.stringify(profileData)
+      })
+  },
+
   // Reports
   reports: {
     list: (params?: { type?: string; category?: string; status?: string; search?: string }) => {
@@ -95,6 +105,15 @@ export const api = {
         method: 'POST',
         body: JSON.stringify(reportData)
       }),
+    uploadImage: async (reportId: string, file: File, isPrimary: boolean = true) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('is_primary', String(isPrimary));
+      return request<any>(`/reports/${reportId}/images`, {
+        method: 'POST',
+        body: formData
+      });
+    },
     updateStatus: (id: string, status: string, notes?: string) =>
       request<any>(`/reports/${id}/status`, {
         method: 'PATCH',

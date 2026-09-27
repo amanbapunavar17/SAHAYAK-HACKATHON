@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../lib/authContext';
 import { reportsService, assistantService } from '../../lib/services';
@@ -13,10 +13,13 @@ import {
   Clock, 
   ArrowRight, 
   CheckCircle2, 
-  Info,
-  ShieldCheck,
-  Building,
-  Award
+  Info, 
+  ShieldCheck, 
+  Building, 
+  Award,
+  Image as ImageIcon,
+  Camera,
+  X
 } from 'lucide-react';
 
 const CATEGORIES: ItemCategory[] = [
@@ -33,6 +36,7 @@ const CATEGORIES: ItemCategory[] = [
 const CAMPUS_DISCOVERY_LOCATIONS = [
   'Sir MV Block - Ground Floor Corridor',
   'Sir MV Block - 2nd Floor Labs',
+  'SB Block (Computing & AI Labs)',
   'Central Library - Main Reading Hall',
   'North Canteen - Table 14',
   'Administrative Block - Reception',
@@ -50,6 +54,7 @@ const CAMPUS_STORAGE_POINTS = [
 export const ReportFoundPage: React.FC = () => {
   const { studentUser } = useAuth();
   const navigate = useNavigate();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,12 +69,58 @@ export const ReportFoundPage: React.FC = () => {
   const [incidentTime, setIncidentTime] = useState('11:15');
 
   // Found Image (Required)
-  const [imageUrl, setImageUrl] = useState('https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60');
   const [imageSource, setImageSource] = useState<ImageSource>('USER_CAPTURED');
+  const [dragActive, setDragActive] = useState(false);
 
   const [aiAssisting, setAiAssisting] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [createdReportId, setCreatedReportId] = useState<string | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setImageFile(file);
+      setImageSource('USER_CAPTURED');
+      
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        if (uploadEvent.target?.result) {
+          setImagePreview(uploadEvent.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      setImageFile(file);
+      setImageSource('USER_CAPTURED');
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        if (uploadEvent.target?.result) {
+          setImagePreview(uploadEvent.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAiAssistance = async () => {
     if (!title) return;
@@ -100,17 +151,17 @@ export const ReportFoundPage: React.FC = () => {
         images: [
           {
             id: `img-${Date.now()}`,
-            url: imageUrl,
+            url: imagePreview,
             source: imageSource,
             isReference: false,
             uploadedAt: new Date().toISOString()
           }
         ],
         reporterId: studentUser?.id || 'std-1',
-        reporterName: studentUser?.fullName || 'Rahul Sharma',
+        reporterName: studentUser?.fullName || studentUser?.name || 'Rahul Sharma',
         reporterUSN: studentUser?.usn || '4NI21CS089',
         isAnonymous: false
-      });
+      }, imageFile);
 
       setCreatedReportId(report.id);
       setStep(3);
@@ -158,16 +209,16 @@ export const ReportFoundPage: React.FC = () => {
               <div className="p-3.5 rounded-xl bg-sahayak-cream border border-sahayak-brown/10 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-sahayak-blue-ice text-sahayak-blue flex items-center justify-center font-bold text-xs">
-                    WATCH
+                    LAPTOP
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs text-sahayak-text-primary">Noise ColorFit Pro 4</h4>
+                    <h4 className="font-bold text-xs text-sahayak-text-primary">HP Pavilion Laptop</h4>
                     <p className="text-[11px] text-sahayak-text-muted">Lost by Rahul (4NI21CS089)</p>
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                    setTitle('Noise ColorFit Pro 4');
+                    setTitle('HP Pavilion Laptop');
                     setCategory('ELECTRONICS');
                     setStep(2);
                   }}
@@ -183,13 +234,13 @@ export const ReportFoundPage: React.FC = () => {
                     CALC
                   </div>
                   <div>
-                    <h4 className="font-bold text-xs text-sahayak-text-primary">Casio Scientific fx-991CW</h4>
-                    <p className="text-[11px] text-sahayak-text-muted">Lost by Ananya (4NI21IS042)</p>
+                    <h4 className="font-bold text-xs text-sahayak-text-primary">Casio fx-991EX Calculator</h4>
+                    <p className="text-[11px] text-sahayak-text-muted">Lost by Karthik (4NI21EC045)</p>
                   </div>
                 </div>
                 <button
                   onClick={() => {
-                    setTitle('Casio Scientific fx-991CW');
+                    setTitle('Casio Scientific fx-991EX');
                     setCategory('CALCULATORS');
                     setStep(2);
                   }}
@@ -229,7 +280,7 @@ export const ReportFoundPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Casio Scientific Calculator fx-991CW"
+                  placeholder="e.g. Casio Scientific Calculator fx-991EX"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   className="w-full bg-sahayak-cream border border-sahayak-brown/20 rounded-xl px-4 py-2.5 text-sm text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue"
@@ -318,29 +369,95 @@ export const ReportFoundPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Found Item Photo */}
+            {/* Real Interactive Image Upload Section */}
             <div className="space-y-3 p-4 rounded-xl bg-sahayak-cream border border-sahayak-brown/15">
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider">
-                  Photo of Found Item (Required for AI Matching) *
+                <label className="block text-xs font-bold text-sahayak-text-primary uppercase tracking-wider flex items-center gap-1.5">
+                  <ImageIcon className="w-4 h-4 text-sahayak-blue" />
+                  <span>Found Item Photo (Required for Neural Match Radar) *</span>
                 </label>
-                <span className="text-[11px] font-bold text-sahayak-success">Source: Captured</span>
+                <span className="text-[11px] font-bold text-sahayak-success">Neural Vision Ready</span>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-4 items-center">
-                <img
-                  src={imageUrl}
-                  alt="Found Preview"
-                  className="w-24 h-24 rounded-xl object-cover border border-sahayak-brown/20 shadow-sm"
+              {/* Drag & Drop File Selector Zone */}
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+                  dragActive 
+                    ? 'border-sahayak-blue bg-sahayak-blue-ice/60 scale-[1.01]' 
+                    : 'border-sahayak-brown/25 bg-sahayak-cream-soft hover:border-sahayak-blue/60 hover:bg-sahayak-cream'
+                }`}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleFileChange}
+                  className="hidden"
                 />
-                <div className="flex-1 w-full space-y-2">
+
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <div className="w-12 h-12 rounded-2xl bg-sahayak-blue/10 text-sahayak-blue flex items-center justify-center shadow-neumorph-sm">
+                    <UploadCloud className="w-6 h-6 text-sahayak-blue" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-sahayak-text-primary">
+                      Click to Browse or Drag & Drop Captured Item Photo
+                    </p>
+                    <p className="text-[11px] text-sahayak-text-muted mt-0.5">
+                      Supports JPG, PNG, or WEBP (Max 10MB)
+                    </p>
+                  </div>
+                  {imageFile && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sahayak-success-soft text-sahayak-success text-xs font-bold mt-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>{imageFile.name} ({(imageFile.size / 1024).toFixed(1)} KB)</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview & Image URL Alternative */}
+              <div className="flex flex-col sm:flex-row gap-4 items-center pt-2">
+                <div className="relative w-24 h-24 rounded-xl overflow-hidden border border-sahayak-brown/20 shadow-sm shrink-0 bg-sahayak-cream-soft flex items-center justify-center">
+                  <img
+                    src={imagePreview}
+                    alt="Found Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  {imageFile && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setImageFile(null);
+                        setImagePreview('https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=500&auto=format&fit=crop&q=60');
+                      }}
+                      className="absolute top-1 right-1 p-1 rounded-full bg-sahayak-error text-white hover:opacity-90 shadow-sm"
+                      title="Remove custom photo"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex-1 w-full space-y-1.5">
+                  <label className="block text-[11px] font-bold text-sahayak-text-secondary uppercase">
+                    Or paste image URL:
+                  </label>
                   <input
                     type="text"
-                    required
-                    value={imageUrl}
-                    onChange={(e) => setImageUrl(e.target.value)}
-                    placeholder="Enter image URL or take photo"
-                    className="w-full bg-sahayak-cream-soft border border-sahayak-brown/20 rounded-xl px-3 py-2 text-xs text-sahayak-text-primary"
+                    value={imagePreview}
+                    onChange={(e) => {
+                      setImagePreview(e.target.value);
+                      setImageFile(null);
+                    }}
+                    placeholder="https://example.com/found.jpg"
+                    className="w-full bg-sahayak-cream-soft border border-sahayak-brown/20 rounded-xl px-3 py-2 text-xs text-sahayak-text-primary focus:outline-none focus:ring-2 focus:ring-sahayak-blue"
                   />
                   <p className="text-[11px] text-sahayak-text-muted">
                     Photo will be processed for neural visual features.

@@ -15,8 +15,8 @@ import {
 } from 'lucide-react';
 
 export const StudentLoginPage: React.FC = () => {
-  const [email, setEmail] = useState('rahul.sharma@nie.ac.in');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('rahul.nie@nie.ac.in');
+  const [password, setPassword] = useState('Student@123');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -34,10 +34,10 @@ export const StudentLoginPage: React.FC = () => {
       if (success) {
         navigate('/student');
       } else {
-        setError('Invalid NIE credentials. Please check your institutional email and password.');
+        setError('Invalid credentials. Please verify your institutional email and password.');
       }
-    } catch (err) {
-      setError('An error occurred during authentication. Please try again.');
+    } catch (err: any) {
+      setError(err?.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
