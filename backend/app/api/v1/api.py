@@ -13,7 +13,8 @@ from app.api.v1.routes import (
     notifications,
     locations,
     admin,
-    assistant
+    assistant,
+    vision
 )
 
 api_router = APIRouter()
@@ -32,6 +33,7 @@ api_router.include_router(notifications.router)
 api_router.include_router(locations.router)
 api_router.include_router(admin.router)
 api_router.include_router(assistant.router)
+api_router.include_router(vision.router)
 
 # Also expose /ai/describe directly for exact endpoint matching
 ai_direct_router = APIRouter(prefix="/ai", tags=["AI & Vision"])
