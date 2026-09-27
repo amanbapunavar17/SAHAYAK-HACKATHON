@@ -42,7 +42,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
   const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [activeZoneFilter, setActiveZoneFilter] = useState<string>('ALL');
   const [isHeatmapMode, setIsHeatmapMode] = useState<boolean>(initialHeatmap);
-  const [mapTileStyle, setMapTileStyle] = useState<MapTileStyle>('campus');
+  const [mapTileStyle, setMapTileStyle] = useState<MapTileStyle>('satellite');
   const [selectedBuilding, setSelectedBuilding] = useState<any | null>(null);
   const [selectedItemPin, setSelectedItemPin] = useState<any | null>(null);
   const [heatmapData, setHeatmapData] = useState<any>(null);
@@ -69,7 +69,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     loadData();
   }, []);
 
-  // Helper to switch tile layers
+  // Helper to switch tile layers (Esri Satellite, Campus Voyager, Street)
   const updateTileLayer = (map: L.Map, style: MapTileStyle) => {
     if (tileLayerGroupRef.current) {
       tileLayerGroupRef.current.clearLayers();
@@ -79,25 +79,33 @@ export const CampusMap: React.FC<CampusMapProps> = ({
 
     const tileGroup = tileLayerGroupRef.current;
 
-    if (style === 'campus') {
-      // CartoDB Voyager: Crisp, modern colors, high readability
+    if (style === 'satellite') {
+      // Esri ArcGIS World Imagery High-Res Satellite
+      const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; Esri &bull; High-Res Satellite Imagery',
+        maxNativeZoom: 19,
+        maxZoom: 20
+      });
+      // Esri Places & Boundaries Labels Overlay
+      const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 20
+      });
+      // Esri Transportation Overlay
+      const roads = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 20
+      });
+
+      tileGroup.addLayer(sat);
+      tileGroup.addLayer(roads);
+      tileGroup.addLayer(labels);
+    } else if (style === 'campus') {
+      // CartoDB Voyager: Crisp, modern vector colors
       const voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://carto.com/">CARTO</a> &bull; NIE Campus',
         maxZoom: 20,
         subdomains: 'abcd'
       });
       tileGroup.addLayer(voyager);
-    } else if (style === 'satellite') {
-      // Esri Satellite + Street/Place Label Overlay
-      const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: '&copy; Esri &bull; High-Res Satellite',
-        maxZoom: 19
-      });
-      const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19
-      });
-      tileGroup.addLayer(sat);
-      tileGroup.addLayer(labels);
     } else {
       // OpenStreetMap Standard
       const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -108,7 +116,7 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     }
   };
 
-  // 1. Initialize Leaflet Map and Render exact nie_north.geojson
+  // 1. Initialize Leaflet Map and Render exact nie_north.geojson on Esri Satellite
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -123,24 +131,24 @@ export const CampusMap: React.FC<CampusMapProps> = ({
       zoomControl: false
     });
 
-    updateTileLayer(map, mapTileStyle);
+    updateTileLayer(map, 'satellite');
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
     // Layer group for GeoJSON Boundary & Places
     const geoJsonGroup = L.layerGroup().addTo(map);
     geoJsonLayerGroupRef.current = geoJsonGroup;
 
-    // Load exact GeoJSON data
+    // Load exact GeoJSON data with high-contrast glowing styling for Satellite
     try {
       const geoLayer = L.geoJSON(nieNorthGeoJson as any, {
         style: (feature) => {
           if (feature?.geometry?.type === 'Polygon') {
             return {
-              color: '#0375DE',
+              color: '#00f0ff',
               weight: 3,
-              dashArray: '6, 6',
-              fillColor: '#0375DE',
-              fillOpacity: 0.08
+              dashArray: '5, 5',
+              fillColor: '#00f0ff',
+              fillOpacity: 0.12
             };
           }
           return {};
