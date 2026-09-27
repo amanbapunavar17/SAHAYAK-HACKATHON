@@ -228,7 +228,7 @@ export const RewardsPage: React.FC = () => {
       <CertificateModal
         isOpen={showCertificate}
         onClose={() => setShowCertificate(false)}
-        recipientName={studentUser?.fullName || studentUser?.name || 'Rahul Sharma'}
+        recipientName={studentUser?.fullName || studentUser?.name || 'NIE Student'}
         itemTitle="Verified Good Samaritan Recovery"
         date={new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         pointsAwarded={points}

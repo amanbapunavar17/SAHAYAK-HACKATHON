@@ -86,7 +86,7 @@ export const LeaderboardPage: React.FC = () => {
               const isGold = idx === 0;
               const name = entry.studentName || entry.name || entry.fullName || 'Student';
               const avatarImg = entry.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.usn || name}`;
-              const usnStr = entry.usn || '4NI21CS089';
+              const usnStr = entry.usn || '';
               const count = entry.recoveredCount || entry.recoveriesCount || 0;
               const score = entry.points || 0;
 
@@ -162,7 +162,7 @@ export const LeaderboardPage: React.FC = () => {
                   {filteredLeaderboard.map((entry, idx) => {
                     const name = entry.studentName || entry.name || entry.fullName || 'Student';
                     const avatarImg = entry.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${entry.usn || name}`;
-                    const usnStr = entry.usn || '4NI21CS089';
+                    const usnStr = entry.usn || '';
                     const count = entry.recoveredCount || entry.recoveriesCount || 0;
                     const score = entry.points || 0;
 
