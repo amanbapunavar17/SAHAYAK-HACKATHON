@@ -4,8 +4,12 @@
  * with robust local fallback for resilient dev experience.
  */
 
+const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
 const PRIMARY_API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
-const FALLBACK_API_BASES = ['http://127.0.0.1:8000/api/v1', 'http://localhost:8000/api/v1'];
+const FALLBACK_API_BASES = (!isHttps && isLocalhost) ? ['http://127.0.0.1:8000/api/v1', 'http://localhost:8000/api/v1'] : [];
+
 
 export interface ApiResponseEnvelope<T> {
   data: T | null;
