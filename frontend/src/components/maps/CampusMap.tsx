@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { CampusLocation } from '../../types';
 import { api } from '../../lib/api';
+import nieNorthGeoJson from '../../data/nie_north';
 import { 
   MapPin, 
   Layers, 
@@ -35,14 +36,14 @@ export const CampusMap: React.FC<CampusMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const tileLayerGroupRef = useRef<L.LayerGroup | null>(null);
+  const geoJsonLayerGroupRef = useRef<L.LayerGroup | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
-  const boundaryGroupRef = useRef<L.LayerGroup | null>(null);
 
   const [locations, setLocations] = useState<CampusLocation[]>([]);
   const [activeZoneFilter, setActiveZoneFilter] = useState<string>('ALL');
   const [isHeatmapMode, setIsHeatmapMode] = useState<boolean>(initialHeatmap);
   const [mapTileStyle, setMapTileStyle] = useState<MapTileStyle>('campus');
-  const [selectedBuilding, setSelectedBuilding] = useState<CampusLocation | null>(null);
+  const [selectedBuilding, setSelectedBuilding] = useState<any | null>(null);
   const [selectedItemPin, setSelectedItemPin] = useState<any | null>(null);
   const [heatmapData, setHeatmapData] = useState<any>(null);
 
@@ -107,35 +108,70 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     }
   };
 
-  // 1. Initialize Leaflet Map
+  // 1. Initialize Leaflet Map and Render exact nie_north.geojson
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Default center from database NIE locations
-    const centerLatLng: [number, number] = [12.3548, 76.6130];
+    // Default center around NIE North coordinates in nie_north.geojson
+    const centerLatLng: [number, number] = [12.3713, 76.5869];
 
     const map = L.map(mapContainerRef.current, {
       center: centerLatLng,
       zoom: 17,
-      minZoom: 13,
+      minZoom: 14,
       maxZoom: 20,
       zoomControl: false
     });
 
     updateTileLayer(map, mapTileStyle);
-
     L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+    // Layer group for GeoJSON Boundary & Places
+    const geoJsonGroup = L.layerGroup().addTo(map);
+    geoJsonLayerGroupRef.current = geoJsonGroup;
+
+    // Load exact GeoJSON data
+    try {
+      const geoLayer = L.geoJSON(nieNorthGeoJson as any, {
+        style: (feature) => {
+          if (feature?.geometry?.type === 'Polygon') {
+            return {
+              color: '#0375DE',
+              weight: 3,
+              dashArray: '6, 6',
+              fillColor: '#0375DE',
+              fillOpacity: 0.08
+            };
+          }
+          return {};
+        },
+        onEachFeature: (feature, layer) => {
+          if (feature?.geometry?.type === 'Polygon') {
+            layer.bindTooltip(`🏛️ <strong>${feature.properties?.Name || 'NIE North Campus Boundary'}</strong><br/>${feature.properties?.description || 'National Institute of Engineering'}`, { sticky: true });
+          }
+        }
+      });
+
+      geoJsonGroup.addLayer(geoLayer);
+
+      // Fit map viewport directly to the nie_north.geojson bounds
+      const bounds = geoLayer.getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [35, 35], maxZoom: 18 });
+      }
+    } catch (err) {
+      console.warn('Failed to render nie_north.geojson layer:', err);
+    }
 
     const markersGroup = L.layerGroup().addTo(map);
     markersGroupRef.current = markersGroup;
     mapInstanceRef.current = map;
 
-    // Trigger invalidateSize after initial render
+    // Invalidate size on mount and container resizing
     setTimeout(() => {
       map.invalidateSize();
     }, 200);
 
-    // Resize observer to keep map perfectly rendered
     const resizeObserver = new ResizeObserver(() => {
       map.invalidateSize();
     });
@@ -150,15 +186,165 @@ export const CampusMap: React.FC<CampusMapProps> = ({
     };
   }, []);
 
-  // Fit bounds when database locations load
+  // 2. React to Tile Style Changes
   useEffect(() => {
-    if (!mapInstanceRef.current || locations.length === 0) return;
-    const latLngs = locations.map(loc => [loc.latitude, loc.longitude] as [number, number]);
-    if (latLngs.length > 0) {
-      const bounds = L.latLngBounds(latLngs);
-      mapInstanceRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+    if (mapInstanceRef.current) {
+      updateTileLayer(mapInstanceRef.current, mapTileStyle);
     }
-  }, [locations]);
+  }, [mapTileStyle]);
+
+  // 3. Render Landmark Markers from nie_north.geojson & Live DB Reports
+  useEffect(() => {
+    if (!mapInstanceRef.current || !markersGroupRef.current) return;
+
+    const markersGroup = markersGroupRef.current;
+    markersGroup.clearLayers();
+
+    // Extract Point landmarks from nie_north.geojson
+    const geoJsonPoints = ((nieNorthGeoJson as any).features || []).filter(
+      (f: any) => f.geometry?.type === 'Point'
+    );
+
+    // Render Point Landmark Markers
+    geoJsonPoints.forEach((feat: any) => {
+      const [lng, lat] = feat.geometry.coordinates;
+      const props = feat.properties || {};
+      const name = props.name || 'Campus Place';
+      const category = props.category || 'General';
+      const color = props.color || '#0375DE';
+
+      // Match with database location report counts
+      const matchedDbLoc = locations.find(l => 
+        l.name.toLowerCase().includes(name.toLowerCase()) || 
+        name.toLowerCase().includes(l.name.toLowerCase()) ||
+        name.toLowerCase().includes(l.building?.toLowerCase() || '')
+      );
+
+      const itemCount = matchedDbLoc?.itemCount || 0;
+      const isSelected = selectedLocation === name || selectedBuilding?.name === name;
+
+      const customIcon = L.divIcon({
+        className: 'custom-map-pin',
+        html: `
+          <div style="
+            background: ${color};
+            width: 32px;
+            height: 32px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ffffff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            ${isSelected ? 'transform: rotate(-45deg) scale(1.3); border-color: #F59E0B;' : ''}
+          ">
+            <span style="transform: rotate(45deg); font-size: 13px; font-weight: bold; color: white;">📍</span>
+          </div>
+        `,
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -32]
+      });
+
+      const marker = L.marker([lat, lng], { icon: customIcon });
+
+      const popupHtml = `
+        <div style="min-width: 190px; font-family: Inter, sans-serif; padding: 4px;">
+          <div style="font-weight: 800; font-size: 0.95rem; color: #0C1E33; margin-bottom: 2px;">${name}</div>
+          <div style="font-size: 0.72rem; color: ${color}; font-weight: 700; margin-bottom: 4px;">Category: ${category}</div>
+          <div style="font-size: 0.75rem; color: #4A5A6A; margin-bottom: 6px;">Active Items Logged: <strong>${itemCount}</strong></div>
+          <div style="font-size: 0.7rem; color: #8A96A0;">NIE North Campus Feature</div>
+        </div>
+      `;
+
+      marker.bindPopup(popupHtml);
+      marker.on('click', () => {
+        setSelectedBuilding({ name, category, color, itemCount, latitude: lat, longitude: lng });
+        setSelectedItemPin(null);
+        onLocationSelect?.(name);
+      });
+
+      markersGroup.addLayer(marker);
+    });
+
+    // Real-Time Dynamic Heatmap from Live Database Reports
+    if (isHeatmapMode && heatmapData?.points) {
+      heatmapData.points.forEach((p: any) => {
+        if (p.totalCount > 0) {
+          const radius = Math.max(35, Math.min(85, 30 + p.totalCount * 14));
+          const opacity = Math.min(0.7, 0.3 + p.intensity * 0.4);
+          const color = p.totalCount >= 3 ? '#EF4444' : p.totalCount >= 1 ? '#F59E0B' : '#0375DE';
+
+          const circle = L.circle([p.latitude, p.longitude], {
+            radius: radius,
+            color: color,
+            fillColor: color,
+            fillOpacity: opacity,
+            weight: 2
+          });
+          circle.bindTooltip(`🔥 Activity Hotspot: <strong>${p.name}</strong><br/>• Total Logs: ${p.totalCount} (Lost: ${p.lostCount}, Found: ${p.foundCount}, Resolved: ${p.returnedCount || 0})`, { permanent: false });
+          markersGroup.addLayer(circle);
+        }
+      });
+    }
+
+    // Live Item Pins (Render actual lost/found item points)
+    if (heatmapData?.liveItems && heatmapData.liveItems.length > 0) {
+      heatmapData.liveItems.forEach((item: any) => {
+        const isLost = item.type === 'LOST';
+        const isResolved = item.status === 'RETURNED' || item.status === 'CLOSED';
+        const pinColor = isResolved ? '#10B981' : isLost ? '#EF4444' : '#3B82F6';
+        const symbol = isResolved ? '✓' : isLost ? '🔍' : '📦';
+
+        const itemIcon = L.divIcon({
+          className: 'item-live-pin',
+          html: `
+            <div style="
+              background: ${pinColor};
+              width: 28px;
+              height: 28px;
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              border: 2px solid #ffffff;
+              box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+              cursor: pointer;
+              font-size: 12px;
+              color: white;
+              transition: transform 0.2s;
+            ">
+              ${symbol}
+            </div>
+          `,
+          iconSize: [28, 28],
+          iconAnchor: [14, 14],
+          popupAnchor: [0, -14]
+        });
+
+        const itemMarker = L.marker([item.latitude, item.longitude], { icon: itemIcon });
+        const itemPopup = `
+          <div style="min-width: 180px; font-family: Inter, sans-serif; padding: 4px;">
+            <div style="font-weight: 800; font-size: 0.9rem; color: #0C1E33;">${item.title}</div>
+            <div style="font-size: 0.72rem; font-weight: 700; color: ${pinColor}; text-transform: uppercase; margin-top: 1px;">
+              ${item.type} &bull; ${item.status}
+            </div>
+            <div style="font-size: 0.72rem; color: #4A5A6A; margin-top: 3px;">📍 ${item.incidentPlace || item.locationName}</div>
+            <div style="font-size: 0.7rem; color: #8A96A0;">📅 ${item.eventDate || 'Recent'} ${item.eventTime || ''}</div>
+          </div>
+        `;
+        itemMarker.bindPopup(itemPopup);
+        itemMarker.on('click', () => {
+          setSelectedItemPin(item);
+          setSelectedBuilding(null);
+        });
+        markersGroup.addLayer(itemMarker);
+      });
+    }
+  }, [activeZoneFilter, isHeatmapMode, selectedLocation, selectedBuilding, locations, heatmapData]);
 
   // 2. React to Tile Style Changes
   useEffect(() => {

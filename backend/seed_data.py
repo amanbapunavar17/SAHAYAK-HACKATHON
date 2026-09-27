@@ -38,79 +38,77 @@ def seed(db=None):
     embedding_provider = get_embedding_provider()
 
     try:
-        # Clear existing tables
         Base.metadata.create_all(bind=engine)
 
-        # Check if already seeded
-        if db.query(User).filter(User.email == "rahul.nie@nie.ac.in").first():
-            print("Database already contains seed data. Refreshing records...")
-            db.query(AuditLog).delete()
-            db.query(Notification).delete()
-            db.query(Milestone).delete()
-            db.query(RewardTransaction).delete()
-            db.query(HandoverRecord).delete()
-            db.query(VerificationQuestion).delete()
-            db.query(VerificationCase).delete()
-            db.query(PotentialMatch).delete()
-            db.query(ItemImage).delete()
-            db.query(ItemReport).delete()
-            db.query(CampusLocation).delete()
-            db.query(StudentProfile).delete()
-            db.query(User).delete()
-            db.commit()
+        # Clear existing tables to ensure clean seed
+        print("Database refreshing records with exact nie_north.geojson coordinates...")
+        db.query(AuditLog).delete()
+        db.query(Notification).delete()
+        db.query(Milestone).delete()
+        db.query(RewardTransaction).delete()
+        db.query(HandoverRecord).delete()
+        db.query(VerificationQuestion).delete()
+        db.query(VerificationCase).delete()
+        db.query(PotentialMatch).delete()
+        db.query(ItemImage).delete()
+        db.query(ItemReport).delete()
+        db.query(CampusLocation).delete()
+        db.query(StudentProfile).delete()
+        db.query(User).delete()
+        db.commit()
 
         # 1. Seed Campus Locations (NIE North Campus)
         print("📍 Seeding NIE North Campus Locations...")
         locations_data = [
             {
                 "id": "loc-mv-block",
-                "name": "Sir MV Block (Main Academic Block)",
+                "name": "MB block (Sir MV Main Academic Block)",
                 "campus": "NIE North Campus",
                 "zone": "Academic Zone",
                 "building": "MB Block",
                 "floor": "2nd Floor",
                 "room": "MB-204 Lecture Hall",
-                "latitude": 12.3551,
-                "longitude": 76.6128,
+                "latitude": 12.3713084,
+                "longitude": 76.5869772,
                 "location_type": "ACADEMIC_BLOCK",
                 "has_collection_desk": True
             },
             {
                 "id": "loc-sb-block",
-                "name": "SB Block (Computing & AI Labs)",
+                "name": "SB block (LAB building)",
                 "campus": "NIE North Campus",
                 "zone": "Lab Zone",
                 "building": "SB Block",
                 "floor": "3rd Floor",
                 "room": "CS Lab 4",
-                "latitude": 12.3556,
-                "longitude": 76.6133,
+                "latitude": 12.3714376,
+                "longitude": 76.5847868,
                 "location_type": "LABORATORY",
                 "has_collection_desk": False
             },
             {
                 "id": "loc-library",
-                "name": "Central Digital Library",
+                "name": "NIE Library",
                 "campus": "NIE North Campus",
                 "zone": "Academic Zone",
                 "building": "Library Complex",
                 "floor": "1st Floor",
                 "room": "Reading Hall West",
-                "latitude": 12.3548,
-                "longitude": 76.6122,
+                "latitude": 12.3715731,
+                "longitude": 76.587176,
                 "location_type": "LIBRARY",
                 "has_collection_desk": True
             },
             {
                 "id": "loc-canteen",
-                "name": "Campus Food Court & Nescafe",
+                "name": "NIE Food Court",
                 "campus": "NIE North Campus",
                 "zone": "Amenities",
-                "building": "Student Amenities Block",
+                "building": "Food Court",
                 "floor": "Ground Floor",
-                "room": "Seating Area 2",
-                "latitude": 12.3542,
-                "longitude": 76.6135,
+                "room": "Seating Area",
+                "latitude": 12.3728602,
+                "longitude": 76.5856585,
                 "location_type": "CANTEEN",
                 "has_collection_desk": False
             },
@@ -119,37 +117,37 @@ def seed(db=None):
                 "name": "NIE Central Lost & Found Office",
                 "campus": "NIE North Campus",
                 "zone": "Administrative Zone",
-                "building": "Admin Block",
+                "building": "MB Block Admin Area",
                 "floor": "Ground Floor",
                 "room": "Room MB-02 (Proctor Desk)",
-                "latitude": 12.3550,
-                "longitude": 76.6125,
+                "latitude": 12.3713084,
+                "longitude": 76.5869772,
                 "location_type": "ADMIN_OFFICE",
                 "has_collection_desk": True
             },
             {
                 "id": "loc-security-gate",
-                "name": "Main Gate 1 Security Desk",
+                "name": "Gopi's Canteen & Entrance Gate",
                 "campus": "NIE North Campus",
                 "zone": "Security Perimeter",
                 "building": "Main Entrance",
                 "floor": "Ground Floor",
                 "room": "Security Post 1",
-                "latitude": 12.3538,
-                "longitude": 76.6120,
+                "latitude": 12.3708848,
+                "longitude": 76.5866563,
                 "location_type": "SECURITY_DESK",
                 "has_collection_desk": True
             },
             {
                 "id": "loc-parking",
-                "name": "Student Two-Wheeler Parking Area B",
+                "name": "Bike parking & BUS Parking Area",
                 "campus": "NIE North Campus",
                 "zone": "Parking Zone",
-                "building": "Open Grounds",
+                "building": "West Parking Area",
                 "floor": "Ground",
-                "room": "Row 4",
-                "latitude": 12.3535,
-                "longitude": 76.6140,
+                "room": "Parking Bay",
+                "latitude": 12.3709215,
+                "longitude": 76.5845615,
                 "location_type": "PARKING",
                 "has_collection_desk": False
             }
